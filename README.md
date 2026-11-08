@@ -11,8 +11,12 @@ local. One coordinator integrates shared contracts, migrations, and route wiring
 Pinned generators, focused tests, and a shared fast check make the changes easier
 to combine and review.
 
-[![CI](https://github.com/y0f/gophling/actions/workflows/ci.yml/badge.svg)](https://github.com/y0f/gophling/actions/workflows/ci.yml)
-[![MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![CI](https://github.com/y0f/gophling/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/y0f/gophling/actions/workflows/ci.yml)
+[![GitHub stars](https://img.shields.io/github/stars/y0f/gophling?style=flat&color=2563eb)](https://github.com/y0f/gophling/stargazers)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/y0f/gophling?label=Go%20minimum&color=2563eb)](https://github.com/y0f/gophling/blob/main/go.mod)
+[![License](https://img.shields.io/badge/license-MIT-2563eb.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/y0f/gophling?sort=semver&color=2563eb)](https://github.com/y0f/gophling/releases/latest)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2563eb?logo=docker&logoColor=white)](https://github.com/y0f/gophling/blob/main/deployments/docker-compose.yml)
 
 ## Start a project
 
