@@ -3,13 +3,14 @@
 <!-- forge:begin init -->
 <img src="docs/assets/gophling.png" alt="gophling mascot" width="128" height="128" align="right">
 
-Go REST API scaffold for parallel coding agents, with PostgreSQL,
-OpenAPI, sqlc, and reproducible checks.
+Go REST API starter with a resource generator: PostgreSQL, sqlc, OpenAPI,
+OIDC/JWT auth, and one-command checks, structured so developers and coding
+agents can add features one module at a time.
 
-Agents work in separate resource packages and Git worktrees, keeping most edits
-local. One coordinator integrates shared contracts, migrations, and route wiring.
-Pinned generators, focused tests, and a shared fast check make the changes easier
-to combine and review.
+`forge add resource` writes a module, migration, queries, OpenAPI operations,
+tests, and wiring that build and pass the fast check without edits. Each
+resource lives in its own package, so work on separate resources stays mostly
+in separate files.
 
 [![CI](https://github.com/y0f/gophling/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/y0f/gophling/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/y0f/gophling?style=flat&color=2563eb)](https://github.com/y0f/gophling/stargazers)
@@ -30,25 +31,24 @@ cd myapp
 go run ./cmd/dev bootstrap
 ```
 
-The installer asks for a module path and the optional components to keep.
-For automation, pass `-yes -module github.com/you/myapp`. Use `-ref <tag-or-SHA>`
-to select the scaffold revision; `.forge.json` records the resolved revision.
-For repeatable setup, pin the launcher version (`cmd/forge@<release>`) and use a
-full commit SHA for `-ref` when selecting older or custom source.
-The selected source must use the launcher's scaffold module path. For older
-releases, use their documented launcher and original module path. A v2 launcher
-rejects v1 source before setup.
+The installer asks for a module path. New projects keep the core API and the
+example `widget` resource; add components with `-with`, remove the example with
+`-drop example`. For automation, pass `-yes -module github.com/you/myapp`.
 
-If in-place initialization is interrupted while publishing files, recover from
-the project root before making manual changes:
+| Component | Adds |
+| --- | --- |
+| `outbox` | Events committed with state changes, relayed with retries |
+| `idempotency` | `Idempotency-Key` replay for create requests |
+| `otlp` | OTLP trace export plus a Collector, Tempo, and Grafana profile |
+| `admin` | Token-protected pprof and expvar on a separate port |
 
-```sh
-go run github.com/y0f/gophling/v2/cmd/forge@<release> init -recover
-```
+Keeping all four adds 26 files, about 1,750 lines of Go, 4 migrations, and 106
+external packages to the API build.
 
-Use the release that performed initialization. Recovery restores the saved
-tracked files and preserves unrelated untracked files. Earlier tool or
-generation failures leave the original project untouched.
+`-ref <tag-or-SHA>` selects the scaffold revision, and `.forge.json` records it.
+If initialization is interrupted while publishing files, run
+`go run github.com/y0f/gophling/v2/cmd/forge@<release> init -recover` from the
+project root with the release that performed it.
 <!-- forge:end init -->
 
 ## Run and verify
@@ -59,8 +59,8 @@ go run ./cmd/dev check
 ./bin/task up
 ```
 
-The fast check runs without a database. `task up` starts the API and Postgres.
-On PowerShell use `./bin/task.exe`; if Task is on PATH, `task` also works.
+The fast check runs without a database. `./bin/task up` starts the API and
+Postgres.
 
 The API is at `http://localhost:8080`, the reference at `/docs`, and the
 contract at `/openapi.yaml`. Read the development bearer token from the API log:
@@ -69,8 +69,8 @@ contract at `/openapi.yaml`. Read the development bearer token from the API log:
 docker compose -f deployments/docker-compose.yml logs api
 ```
 
-`task down` stops the stack and keeps data. `task reset` also deletes the
-database volume.
+`./bin/task down` stops the stack and keeps data. `./bin/task reset` also
+deletes the database volume.
 
 ## Add a feature
 
@@ -88,8 +88,7 @@ the migration before serving the routes.
 Alternatively, ask your coding agent to perform the same change:
 
 > Add a Note resource. Keep reads public and require notes:write for writes.
-> Test invalid input and denied writes. Regenerate the bindings, then run the
-> fast and integration checks.
+> Test invalid input and denied writes, then run the fast and integration checks.
 
 [Agent setup](docs/agents.md) covers instruction loading, local setup, and
 hosted environments.

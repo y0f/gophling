@@ -1,9 +1,10 @@
 <!-- forge:begin init -->
-# Go API scaffold for parallel agents
+# Go REST API starter with a resource generator
 
-Build a Go REST API with PostgreSQL, OpenAPI, and sqlc. Resource packages give
-workers clear ownership; a coordinator integrates shared contracts and migrations.
-The same commands check work locally and in CI.
+Build a Go REST API with PostgreSQL, sqlc, OpenAPI, and OIDC/JWT auth. Each
+resource is its own package, generated ready to build and test, so developers
+and coding agents can add features one module at a time. The same commands
+check work locally and in CI.
 <!-- forge:end init -->
 
 ## Development guide

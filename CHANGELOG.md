@@ -1,5 +1,53 @@
 # Changelog
 
+## v2.1.0
+
+### Changed
+
+- New projects keep only the core API and the example resource. The outbox,
+  idempotency keys, OTLP tracing, and the admin listener are opt-in with
+  `-with outbox,idempotency,otlp,admin`; `-drop` still removes components.
+  Compared with the v2.0.0 default, a fresh project has 127 instead of 151
+  files, about 7,400 instead of 8,800 lines of Go, and 200 instead of 297
+  external packages in the API build.
+- `forge add resource` runs `go run ./cmd/dev generate` itself, so the tree
+  builds immediately. Pass `-no-generate` to batch several resources and
+  generate once. The printed next steps no longer include
+  `go run ./cmd/migrate up`, which failed without `FORGE_DB_URL`; integration
+  tests apply migrations to their own databases.
+- `dev check` builds first and stops on compile errors, then runs lint and unit
+  tests to completion and names every failing step. It also formats the Go
+  files changed in the working tree (formatters only, never lint fixes);
+  `dev ci` stays check-only.
+- Generated idempotency code is a thin per-resource adapter over shared
+  `internal/idempotency` and `internal/platform/httpjson` helpers. A generated
+  resource is 606 lines in the default project and 786 with every component,
+  down from 929. Stored keys, hashes, statuses, and messages are unchanged.
+- Agent-facing docs use one spelling per command (`go run ./cmd/dev <verb>`,
+  `go test ...`). Release verification moved to
+  `.github/RELEASING.md#verify-a-release`.
+- Pinned tools: golangci-lint v2.15.0, oapi-codegen v2.8.2, govulncheck v1.9.0,
+  Task v3.54.0, x/tools v0.52.0. Dependencies: kin-openapi v0.153.0,
+  testcontainers-go v0.45.0. Container images move to Debian 13
+  (`golang:1.27.3-trixie`, distroless `static-debian13:nonroot`).
+
+### Added
+
+- `go run ./cmd/dev fmt [packages]` runs the formatters lint enforces.
+
+### Fixed
+
+- `forge add resource` rejects `Main`, `Internal`, and `Testdata`, which
+  produced a project that failed to build or whose tests were silently skipped,
+  and rejects non-ASCII names before writing. `/.forge-resource.lock` is
+  ignored by Git.
+
+### Removed
+
+- The unused `auth.Middleware` and `RouterDeps.Mounts`. Contract routes
+  authenticate through the OpenAPI validator; routes outside the contract go on
+  `BaseRouter`, unvalidated and unauthenticated.
+
 ## v2.0.0
 
 - The scaffold's Go module is now `github.com/y0f/gophling/v2`. Create a project
