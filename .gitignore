@@ -14,3 +14,4 @@ __debug_bin*
 /.forge-init-backup-*/
 /.forge-init-retired-*/
 /.forge-new-*/
+/.forge-resource.lock

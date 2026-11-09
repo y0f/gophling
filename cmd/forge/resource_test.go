@@ -371,11 +371,26 @@ func TestCompositionAliasesAvoidInfrastructureImports(t *testing.T) {
 }
 
 func TestResourceRejectsReservedNamesBeforeWriting(t *testing.T) {
-	for _, name := range []string{"Type", "Unimplemented", "ServerInterface", "Handler", "Con", "Prn", "Aux", "Nul", "Com1", "Com9", "Lpt1", "Lpt9"} {
+	for _, name := range []string{"Type", "Unimplemented", "ServerInterface", "Handler", "Con", "Prn", "Aux", "Nul", "Com1", "Com9", "Lpt1", "Lpt9", "Main", "Internal", "Testdata"} {
 		t.Run(name, func(t *testing.T) {
 			resourceFixture(t)
 			if err := addResource(newResource(name), false); err == nil {
 				t.Fatal("reserved name accepted")
+			}
+			if _, err := os.Stat("internal"); !os.IsNotExist(err) {
+				t.Fatalf("source written before name validation: %v", err)
+			}
+		})
+	}
+}
+
+func TestResourceRejectsNonASCIINamesBeforeWriting(t *testing.T) {
+	for _, name := range []string{"Café", "Straße"} {
+		t.Run(name, func(t *testing.T) {
+			resourceFixture(t)
+			err := addResource(newResource(name), false)
+			if err == nil || !strings.Contains(err.Error(), "ASCII") {
+				t.Fatalf("got %v", err)
 			}
 			if _, err := os.Stat("internal"); !os.IsNotExist(err) {
 				t.Fatalf("source written before name validation: %v", err)
