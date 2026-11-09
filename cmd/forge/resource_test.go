@@ -533,12 +533,16 @@ func TestGoTemplatesParseForEveryOptionalCombination(t *testing.T) {
 }
 
 // The idempotency branches must render already formatted, without the stray
-// blank lines and import groups an untrimmed {{if}} leaves behind.
+// blank lines and import groups an untrimmed {{if}} leaves behind. The
+// idempotent templates are absent once the idempotency slice is dropped.
 func TestIdempotencyTemplatesRenderFormatted(t *testing.T) {
 	for _, idempotency := range []bool{false, true} {
 		res := newResource("Order")
 		res.Outbox, res.Idempotency = true, idempotency
 		for _, name := range []string{"handler.go.tmpl", "idempotent.go.tmpl", "idempotent_test.go.tmpl"} {
+			if _, err := fs.Stat(templateFS, "templates/"+name); err != nil {
+				continue
+			}
 			src, err := render(name, res)
 			if err != nil {
 				t.Fatal(err)
