@@ -32,13 +32,19 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: go run ./cmd/dev bootstrap|doctor|generate|generate-check|check|ci")
+		return errors.New("usage: go run ./cmd/dev bootstrap|doctor|fmt|generate|generate-check|check|ci")
 	}
 	if _, err := os.Stat("tools/go.mod"); err != nil {
 		return errors.New("run from the project root (tools/go.mod not found)")
 	}
-	if args[0] == "doctor" {
+	switch args[0] {
+	case "doctor":
 		return doctor(args[1:])
+	case "fmt":
+		if err := bootstrap(); err != nil {
+			return err
+		}
+		return execute(nil, fmtCommand(args[1:])...)
 	}
 	if len(args) != 1 {
 		return fmt.Errorf("%s takes no arguments", args[0])
@@ -63,23 +69,124 @@ func run(args []string) error {
 		if err := checkGenerated("internal/gen", generate); err != nil {
 			return err
 		}
-		for _, command := range [][]string{
-			{toolPath("golangci-lint"), "run", "./..."},
-			{"go", "test", "-shuffle=on", "./..."},
-			{"go", "build", "./..."},
-		} {
-			if err := execute(nil, command...); err != nil {
+		if args[0] == "check" {
+			formatted, err := formatChanged()
+			if err != nil {
 				return err
 			}
+			for _, name := range formatted {
+				fmt.Println("formatted:", name)
+			}
+		}
+		// Compile errors stop here, so lint and tests do not repeat them.
+		if err := execute(nil, "go", "build", "./..."); err != nil {
+			return err
+		}
+		steps := []step{
+			{"lint", []string{toolPath("golangci-lint"), "run", "./..."}},
+			{"test", []string{"go", "test", "-shuffle=on", "./..."}},
 		}
 		if args[0] == "ci" {
+			for _, s := range steps {
+				if err := execute(nil, s.argv...); err != nil {
+					return err
+				}
+			}
 			return fullChecks()
+		}
+		if err := runSteps(func(argv ...string) error { return execute(nil, argv...) }, steps...); err != nil {
+			return err
 		}
 		fmt.Println("Fast checks passed. Integration, race, vulnerabilities and containers were not checked; run go run ./cmd/dev ci for those gates.")
 		return nil
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+type step struct {
+	name string
+	argv []string
+}
+
+// runSteps runs every step so one check reports all failing steps. Each tool
+// prints its own output; the error only names the steps.
+func runSteps(run func(argv ...string) error, steps ...step) error {
+	var failed []string
+	for _, s := range steps {
+		if err := run(s.argv...); err != nil {
+			failed = append(failed, s.name)
+		}
+	}
+	if len(failed) > 0 {
+		return fmt.Errorf("check failed: %s", strings.Join(failed, ", "))
+	}
+	return nil
+}
+
+func fmtCommand(targets []string) []string {
+	if len(targets) == 0 {
+		targets = []string{"./..."}
+	}
+	return append([]string{toolPath("golangci-lint"), "fmt"}, targets...)
+}
+
+// formatChanged runs only the formatters (never run --fix, which also applies
+// semantic linter fixes) on the Go files the working tree changed, because
+// golangci-lint fmt has no cache. It returns the files whose bytes changed.
+func formatChanged() ([]string, error) {
+	status, err := exec.Command("git", "status", "--porcelain=v1", "-z", "--untracked-files=all").Output()
+	if err != nil {
+		// Without Git status, lint still reports any formatting drift.
+		return nil, nil
+	}
+	files := changedGoFiles(status)
+	if len(files) == 0 {
+		return nil, nil
+	}
+	before := make([][]byte, len(files))
+	for i, name := range files {
+		if before[i], err = os.ReadFile(name); err != nil { //#nosec G304 -- paths from git status
+			return nil, err
+		}
+	}
+	if err := execute(nil, fmtCommand(files)...); err != nil {
+		return nil, err
+	}
+	var changed []string
+	for i, name := range files {
+		after, err := os.ReadFile(name) //#nosec G304 -- paths from git status
+		if err != nil {
+			return nil, err
+		}
+		if !bytes.Equal(before[i], after) {
+			changed = append(changed, name)
+		}
+	}
+	return changed, nil
+}
+
+// changedGoFiles parses git status --porcelain=v1 -z output. Generated code
+// belongs to checkGenerated, and deleted files have nothing to format.
+func changedGoFiles(status []byte) []string {
+	var files []string
+	entries := strings.Split(string(status), "\x00")
+	for i := 0; i < len(entries); i++ {
+		if len(entries[i]) < 4 {
+			continue
+		}
+		code, name := entries[i][:2], entries[i][3:]
+		if strings.ContainsAny(code, "RC") {
+			i++ // the original path follows a rename or copy
+		}
+		if !strings.HasSuffix(name, ".go") || strings.HasPrefix(name, "internal/gen/") {
+			continue
+		}
+		if info, err := os.Lstat(name); err == nil && info.Mode().IsRegular() {
+			files = append(files, name)
+		}
+	}
+	return files
 }
 
 func bootstrap() error {
