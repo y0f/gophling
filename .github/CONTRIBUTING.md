@@ -22,8 +22,7 @@ go run ./cmd/dev ci
 ```
 
 This includes the fast check, vulnerability scan, race and integration tests,
-and container checks. CI also runs its platform and Go-version matrices and
-release-config validation.
+and container checks. CI also runs its platform and Go-version matrices.
 <!-- forge:begin init -->
 The scaffold also tests initialized presets and generated resources.
 <!-- forge:end init -->

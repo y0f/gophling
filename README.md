@@ -108,7 +108,7 @@ worktrees and shared changes to one coordinator.
 | Auth | OIDC/JWKS or RSA verification; service-level permissions |
 | Operations | Structured logs, Prometheus metrics, health probes, graceful drain |
 | Tests | Unit tests and isolated real-Postgres integration tests |
-| Releases | Pinned tools and Actions, vulnerability checks, non-root image, signed checksums and SBOMs |
+| Supply chain | Pinned tools and Actions, vulnerability checks, non-root image |
 
 <!-- forge:begin outbox -->
 Optional outbox: commit events with state changes and retry failed deliveries.

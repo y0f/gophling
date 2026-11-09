@@ -25,8 +25,7 @@ Keep a regression test for the observed failure. Do not disable checks or edit
 generated code to make a test pass. Investigate blocked I/O and missing cleanup
 before extending timeouts.
 
-`go run ./cmd/dev ci` is the full local gate. CI also exercises its Go/OS matrix
-and release configuration.
+`go run ./cmd/dev ci` is the full local gate. CI also exercises its Go/OS matrix.
 <!-- forge:begin init -->
 Scaffold CI additionally tests initialized presets and generated resources.
 <!-- forge:end init -->

@@ -399,7 +399,7 @@ func fullChecks() error {
 			return err
 		}
 	}
-	fmt.Println("Full local checks passed. CI additionally checks the platform/Go-version/preset matrices and release configuration.")
+	fmt.Println("Full local checks passed. CI additionally checks the platform and Go-version matrices.")
 	return nil
 }
 
