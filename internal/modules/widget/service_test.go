@@ -3,6 +3,7 @@ package widget
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -86,5 +87,15 @@ func TestDeleteRequiresPermission(t *testing.T) {
 	}
 	if repo.deleteCalled {
 		t.Error("repository Delete should not run when forbidden")
+	}
+}
+
+func TestServiceRejectsInvalidNames(t *testing.T) {
+	svc := NewService(&fakeRepo{})
+	actor := auth.Principal{Scopes: []string{PermissionWrite}}
+	for _, name := range []string{"", "   ", strings.Repeat("a", 201)} {
+		if _, err := svc.Create(context.Background(), actor, Input{Name: name}); !errors.Is(err, ErrInvalidInput) {
+			t.Errorf("name length %d: %v", len(name), err)
+		}
 	}
 }

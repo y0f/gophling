@@ -4,7 +4,11 @@
 // resources in this shape (see cmd/forge).
 package widget
 
-import "errors"
+import (
+	"errors"
+	"strings"
+	"unicode/utf8"
+)
 
 // Input is the validated, transport-independent data needed to create or
 // replace a widget.
@@ -14,7 +18,15 @@ type Input struct {
 	Status      string
 }
 
+func (in Input) Validate() error {
+	if strings.TrimSpace(in.Name) == "" || utf8.RuneCountInString(in.Name) > 200 {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
 var (
-	ErrNotFound  = errors.New("widget not found")
-	ErrForbidden = errors.New("forbidden")
+	ErrNotFound     = errors.New("widget not found")
+	ErrForbidden    = errors.New("forbidden")
+	ErrInvalidInput = errors.New("name must contain 1 to 200 characters")
 )

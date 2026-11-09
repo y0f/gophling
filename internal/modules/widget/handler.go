@@ -11,6 +11,7 @@ import (
 	api "github.com/y0f/gophling/v2/internal/gen/api"
 	db "github.com/y0f/gophling/v2/internal/gen/db"
 	"github.com/y0f/gophling/v2/internal/idempotency"
+	"github.com/y0f/gophling/v2/internal/platform/httpjson"
 	"github.com/y0f/gophling/v2/internal/platform/problem"
 )
 
@@ -48,13 +49,13 @@ func (h *Handler) ListWidgets(w http.ResponseWriter, r *http.Request, params api
 	for _, item := range items {
 		out.Items = append(out.Items, toAPIWidget(item))
 	}
-	writeJSON(w, http.StatusOK, out)
+	httpjson.Write(w, http.StatusOK, out)
 }
 
 func (h *Handler) CreateWidget(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeBodyError(w, r, err, "cannot read request body")
+		httpjson.BodyError(w, r, err, "cannot read request body")
 		return
 	}
 	var input api.WidgetInput
@@ -81,7 +82,7 @@ func (h *Handler) CreateWidget(w http.ResponseWriter, r *http.Request) {
 
 func writeCreated(w http.ResponseWriter, created db.Widget) {
 	w.Header().Set("Location", "/v1/widgets/"+created.ID.String())
-	writeJSON(w, http.StatusCreated, toAPIWidget(created))
+	httpjson.Write(w, http.StatusCreated, toAPIWidget(created))
 }
 
 func (h *Handler) GetWidget(w http.ResponseWriter, r *http.Request, id api.WidgetID) {
@@ -90,7 +91,7 @@ func (h *Handler) GetWidget(w http.ResponseWriter, r *http.Request, id api.Widge
 		h.writeError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPIWidget(found))
+	httpjson.Write(w, http.StatusOK, toAPIWidget(found))
 }
 
 func (h *Handler) UpdateWidget(w http.ResponseWriter, r *http.Request, id api.WidgetID) {
@@ -98,7 +99,7 @@ func (h *Handler) UpdateWidget(w http.ResponseWriter, r *http.Request, id api.Wi
 	// The router's SingleJSONDocument middleware has already rejected bodies
 	// with trailing data after the JSON document.
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeBodyError(w, r, err, "invalid JSON body")
+		httpjson.BodyError(w, r, err, "invalid JSON body")
 		return
 	}
 	actor, _ := auth.PrincipalFrom(r.Context())
@@ -107,7 +108,7 @@ func (h *Handler) UpdateWidget(w http.ResponseWriter, r *http.Request, id api.Wi
 		h.writeError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPIWidget(updated))
+	httpjson.Write(w, http.StatusOK, toAPIWidget(updated))
 }
 
 func (h *Handler) DeleteWidget(w http.ResponseWriter, r *http.Request, id api.WidgetID) {
@@ -121,6 +122,8 @@ func (h *Handler) DeleteWidget(w http.ResponseWriter, r *http.Request, id api.Wi
 
 func (h *Handler) writeError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrInvalidInput):
+		problem.Status(w, r, http.StatusBadRequest, err.Error())
 	case errors.Is(err, ErrNotFound):
 		problem.Status(w, r, http.StatusNotFound, "widget not found")
 	case errors.Is(err, ErrForbidden):
@@ -152,29 +155,4 @@ func inputFromAPI(in api.WidgetInput) Input {
 		status = string(*in.Status)
 	}
 	return Input{Name: in.Name, Description: description, Status: status}
-}
-
-// writeBodyError maps a body-read error to 413 when the configured size cap was
-// exceeded, and to 400 otherwise.
-func writeBodyError(w http.ResponseWriter, r *http.Request, err error, badRequestMsg string) {
-	var tooLarge *http.MaxBytesError
-	if errors.As(err, &tooLarge) {
-		problem.Status(w, r, http.StatusRequestEntityTooLarge, "request body exceeds the size limit")
-		return
-	}
-	problem.Status(w, r, http.StatusBadRequest, badRequestMsg)
-}
-
-// writeJSON marshals rather than streams so the bytes are exactly what an
-// idempotent replay stores and serves back: json.Encoder would append a
-// newline the stored copy does not have.
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	body, err := json.Marshal(v)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
 }
