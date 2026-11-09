@@ -42,8 +42,9 @@ keep the core API and the example `widget` resource; add components with
 | `idempotency` | `Idempotency-Key` replay for create requests |
 | `otlp` | OTLP trace export plus a Collector, Tempo, and Grafana profile |
 | `admin` | Token-protected pprof and expvar on a separate port |
+| `release` | Signed binary releases: GoReleaser, cosign, SBOMs, provenance |
 
-Keeping all four adds 26 files, about 1,750 lines of hand-written Go (tests
+Keeping the first four adds 26 files, about 1,750 lines of hand-written Go (tests
 included, `internal/gen` excluded), 4 migrations, and 103 third-party packages
 to the API build.
 
@@ -142,9 +143,11 @@ enables development mode and its temporary signing key.
 <!-- forge:end init -->
 - [Contributing](.github/CONTRIBUTING.md)
 
+<!-- forge:begin release -->
 ## Verify a release
 
 Verify downloaded archives with the signed checksums and provenance steps in
 [release operations](.github/RELEASING.md#verify-a-release).
+<!-- forge:end release -->
 
 MIT. See [LICENSE](LICENSE).

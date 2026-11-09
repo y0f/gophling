@@ -477,7 +477,7 @@ def evaluate(args, task, attempt, sha, verifier, version):
         capture(["git", "clone", "--quiet", "--no-hardlinks", str(args.source), str(workspace)],
                 args.source, args.verify_timeout)
         capture(["git", "checkout", "--quiet", "--detach", sha], workspace, args.verify_timeout)
-        initialize = run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/eval/app", "-with", "outbox,idempotency,otlp,admin"],
+        initialize = run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/eval/app", "-with", "outbox,idempotency,otlp,admin,release"],
                          workspace, directory / "initialize.log", args.verify_timeout)
         record["steps"].append(initialize)
         if initialize["exit_code"] != 0:

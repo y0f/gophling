@@ -189,10 +189,10 @@ jobs:
       fail-fast: false
       matrix:
         options:
-          - "-with outbox,idempotency,otlp,admin"
+          - "-with outbox,idempotency,otlp,admin,release"
           - "-drop example"
           - ""
-          - "-with outbox,idempotency,otlp,admin -drop example"
+          - "-with outbox,idempotency,otlp,admin,release -drop example"
           - "-with outbox -drop example"
           - "-with idempotency -drop example"
     steps:
@@ -245,12 +245,14 @@ jobs:
       - run: docker compose -f deployments/docker-compose.yml config --quiet
       # forge:begin otlp
       # Architecture-specific tags can pull on CI while breaking ARM developers.
+      - run: python -m unittest discover -s .github/scripts -p 'test_check_image_platforms.py'
       - run: python .github/scripts/check_image_platforms.py deployments/docker-compose.yml otel-collector
       # forge:end otlp
       # config never resolves image references, so an image bump to a tag that
       # does not exist would still reach main and only fail at `task up`.
       - run: docker compose -f deployments/docker-compose.yml pull --quiet
 
+  # forge:begin release
   release-config:
     runs-on: ubuntu-latest
     steps:
@@ -258,7 +260,7 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: python -m unittest discover -s .github/scripts -p 'test_*.py'
+      - run: python -m unittest discover -s .github/scripts -p 'test_release.py'
       # release.yml only runs on a tag, so a broken .goreleaser.yaml would first
       # surface during a release. Validate it here with the same action and
       # pinned version the release itself uses.
@@ -266,6 +268,7 @@ jobs:
         with:
           version: v2.20.0
           args: check
+  # forge:end release
 
   vuln:
     runs-on: ubuntu-latest

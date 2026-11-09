@@ -313,11 +313,11 @@ func TestSelectSlicesKeepsOnlyCoreByDefault(t *testing.T) {
 		want       []string // dropped
 		err        string
 	}{
-		{want: []string{"admin", "idempotency", "otlp", "outbox"}},
-		{with: "outbox,idempotency,otlp,admin"},
-		{with: "outbox", want: []string{"admin", "idempotency", "otlp"}},
-		{drop: "example", want: []string{"admin", "example", "idempotency", "otlp", "outbox"}},
-		{drop: "outbox", want: []string{"admin", "idempotency", "otlp", "outbox"}},
+		{want: []string{"admin", "idempotency", "otlp", "outbox", "release"}},
+		{with: "outbox,idempotency,otlp,admin,release"},
+		{with: "outbox", want: []string{"admin", "idempotency", "otlp", "release"}},
+		{drop: "example", want: []string{"admin", "example", "idempotency", "otlp", "outbox", "release"}},
+		{drop: "outbox", want: []string{"admin", "idempotency", "otlp", "outbox", "release"}},
 		{with: "outbox", drop: "outbox", err: "both -with and -drop"},
 		{with: "nope", err: `unknown slice "nope"`},
 	} {

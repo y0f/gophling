@@ -20,7 +20,7 @@ func TestGeneratedProjects(t *testing.T) {
 	_, source, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(source), "../.."))
 	for _, preset := range []struct{ name, with, drop string }{
-		{"full", "outbox,idempotency,otlp,admin", ""}, {"minimal", "", "example"},
+		{"full", "outbox,idempotency,otlp,admin,release", ""}, {"minimal", "", "example"},
 	} {
 		t.Run(preset.name, func(t *testing.T) {
 			dir := t.TempDir()

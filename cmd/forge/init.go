@@ -78,13 +78,29 @@ var slices = []slice{
 		Name:  "otlp",
 		OptIn: true,
 		Title: "OTLP trace export and the Collector, Tempo, Prometheus and Grafana compose profile",
-		Paths: []string{"deployments/observability"},
+		Paths: []string{
+			"deployments/observability",
+			".github/scripts/check_image_platforms.py",
+			".github/scripts/test_check_image_platforms.py",
+		},
 	},
 	{
 		Name:  "admin",
 		OptIn: true,
 		Title: "Admin listener: token-gated pprof and expvar on a separate port",
 		Paths: []string{"internal/server/admin.go"},
+	},
+	{
+		Name:  "release",
+		OptIn: true,
+		Title: "Signed binary releases: GoReleaser archives, cosign-signed checksums, SBOMs and provenance on tag push",
+		Paths: []string{
+			".goreleaser.yaml",
+			".github/workflows/release.yml",
+			".github/RELEASING.md",
+			".github/scripts/release.py",
+			".github/scripts/test_release.py",
+		},
 	},
 }
 
@@ -98,6 +114,7 @@ var derived = []struct {
 }{
 	{Name: "workers", Of: []string{"outbox", "idempotency"}, Paths: []string{"internal/maintenance"}},
 	{Name: "sqlc", Of: []string{"example", "outbox", "idempotency"}, Paths: []string{"internal/gen/db"}},
+	{Name: "scripts", Of: []string{"otlp", "release"}, Paths: []string{".github/scripts"}},
 }
 
 // The installer removes itself: these paths and every "init" block go on
