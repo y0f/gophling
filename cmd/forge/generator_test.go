@@ -54,7 +54,7 @@ func TestGeneratedProjects(t *testing.T) {
 			generatorCommand(t, dir, "git", "diff", "--cached", "--check")
 			generatorCommand(t, dir, "go", "run", "./cmd/dev", "check")
 			for _, resource := range []string{"Order", "Category", "Api", "Http", "Idempotency", "Store", "AuditTest", "InvoiceLinux", "Reference", "Value", strings.Repeat("A", 53)} {
-				generatorCommand(t, dir, "go", "run", "./cmd/forge", "add", "resource", resource)
+				generatorCommand(t, dir, "go", "run", "./cmd/forge", "add", "resource", resource, "-no-generate")
 			}
 			generatorCommand(t, dir, "go", "run", "./cmd/dev", "generate")
 			grader, err := render("journey_test.go.tmpl", resource{Module: module, Idempotency: preset.name == "full"})

@@ -130,7 +130,6 @@ func addResource(res resource, dryRun bool) error {
 	for _, c := range changes {
 		fmt.Println("updated", c.path)
 	}
-	printNextSteps(res)
 	return nil
 }
 

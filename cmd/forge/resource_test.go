@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"go/format"
 	"io"
 	"io/fs"
@@ -47,14 +48,60 @@ func TestNewResourceReadsModuleFromGoMod(t *testing.T) {
 }
 
 func TestNextStepsDescribeContractWorkflow(t *testing.T) {
-	out := captureStdout(t, func() { printNextSteps(newResource("Invoice")) })
-	for _, want := range []string{"api/openapi.yaml", "cmd/api/resources.go", "invoices:write", "go run ./cmd/dev generate", "go run ./cmd/dev check"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("missing %q in next steps: %s", want, out)
+	for _, generated := range []bool{true, false} {
+		out := captureStdout(t, func() { printNextSteps(newResource("Invoice"), generated) })
+		for _, want := range []string{"api/openapi.yaml", "cmd/api/resources.go", "invoices:write", "go run ./cmd/dev check", "./bin/task migrate"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("missing %q in next steps: %s", want, out)
+			}
+		}
+		// A bare migrate fails without FORGE_DB_URL in the process env.
+		if strings.Contains(out, "cmd/migrate up") {
+			t.Errorf("next steps must not print a bare migrate: %s", out)
+		}
+		if got := strings.Contains(out, "cmd/dev generate"); got == generated {
+			t.Errorf("generated=%v: generate step listed=%v: %s", generated, got, out)
+		}
+		if strings.Contains(out, "Mounts") {
+			t.Fatal("default workflow must use the contract")
 		}
 	}
-	if strings.Contains(out, "Mounts") {
-		t.Fatal("default workflow must use the contract")
+}
+
+func TestRunGeneratesAfterAdd(t *testing.T) {
+	calls := 0
+	var genErr error
+	old := runGenerate
+	runGenerate = func() error { calls++; return genErr }
+	t.Cleanup(func() { runGenerate = old })
+	for _, tc := range []struct {
+		flag  string
+		calls int
+	}{{"", 1}, {"-no-generate", 0}, {"-dry-run", 0}} {
+		resourceFixture(t)
+		calls = 0
+		args := []string{"add", "resource", "Order"}
+		if tc.flag != "" {
+			args = append(args, tc.flag)
+		}
+		captureStdout(t, func() {
+			if err := run(args); err != nil {
+				t.Fatalf("%v: %v", args, err)
+			}
+		})
+		if calls != tc.calls {
+			t.Errorf("%v: generate ran %d times, want %d", args, calls, tc.calls)
+		}
+	}
+	resourceFixture(t)
+	genErr = errors.New("exit status 1")
+	var err error
+	captureStdout(t, func() { err = run([]string{"add", "resource", "Order"}) })
+	if err == nil || !strings.Contains(err.Error(), "go run ./cmd/dev generate") {
+		t.Fatalf("want retry hint, got %v", err)
+	}
+	if _, err := os.Stat("internal/modules/order/store.go"); err != nil {
+		t.Fatalf("files not kept after generate failure: %v", err)
 	}
 }
 
