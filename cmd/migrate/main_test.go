@@ -11,15 +11,17 @@ import (
 	"github.com/y0f/gophling/v2/migrations"
 )
 
-// migrate only needs FORGE_DB_URL, so unrelated API settings (auth in
-// production, the admin token) must not stop it before it reaches the database.
+// migrate only needs FORGE_DB_URL, so unrelated API settings must not stop it
+// before it reaches the database.
 func TestMigrateIgnoresUnrelatedConfig(t *testing.T) {
 	cases := []struct {
 		name string
 		env  map[string]string
 	}{
 		{"production without auth", map[string]string{"FORGE_ENV": "production"}},
+		//forge:begin admin
 		{"admin enabled without token", map[string]string{"FORGE_ADMIN_ENABLED": "true"}},
+		//forge:end admin
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

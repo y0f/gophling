@@ -40,9 +40,6 @@ func NewStore(pool *pgxpool.Pool, ttl time.Duration) *Store {
 	return &Store{pool: pool, ttl: ttl}
 }
 
-// TTL is how long a stored key remains replayable.
-func (s *Store) TTL() time.Duration { return s.ttl }
-
 // Hash derives the request fingerprint compared across retries of a key. Each
 // part is length-prefixed so that part boundaries cannot alias.
 func Hash(parts ...[]byte) string {

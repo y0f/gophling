@@ -208,8 +208,6 @@ jobs:
             tools/go.sum
       - run: go run ./cmd/forge init -yes -module github.com/example/app ${{ matrix.options }}
       - run: go run ./cmd/forge add resource Order
-      - run: go -C tools build -o ../bin/ github.com/go-task/task/v3/cmd/task
-      - run: ./bin/task generate
       - run: go -C tools build -o ../bin/ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
       - run: ./bin/golangci-lint run ./...
       - run: go test ./...

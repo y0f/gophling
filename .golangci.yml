@@ -29,11 +29,13 @@ linters:
         linters:
           - misspell
         text: "quizes"
+      # forge:begin init
       # `forge new <dir>` writes to the path the user names; that is the point.
       - path: cmd/forge/init_project\.go
         linters:
           - gosec
         text: "G703:"
+      # forge:end init
       # Doc comments are present where they add value; do not require one on
       # every exported identifier (avoids comment noise).
       - linters:

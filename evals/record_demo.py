@@ -240,8 +240,7 @@ def main():
                       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=", "commit", "--quiet", "--no-verify",
                       "-m", "test: prepare local demonstration fixture"])
         metadata["fixture_commit"] = capture(["git", "rev-parse", "HEAD"])
-        for command in (["go", "run", "./cmd/forge", "add", "resource", "Note"],
-                        ["go", "run", "./cmd/dev", "generate"], ["go", "run", "./cmd/dev", "check"],
+        for command in (["go", "run", "./cmd/forge", "add", "resource", "Note"], ["go", "run", "./cmd/dev", "check"],
                         ["git", "add", "-N", "."], ["git", "diff", "--stat"]):
             recorder.run(command, visible=True)
         metadata["status"] = "passed"
