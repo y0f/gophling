@@ -39,12 +39,9 @@ type RouterDeps struct {
 	Authenticator *auth.Authenticator
 	// API implements the operations in api/openapi.yaml. Nil serves every
 	// operation as 501, which is the state of a project before its first
-	// resource.
-	API api.ServerInterface
-	// Mounts is an escape hatch for routes outside the OpenAPI contract.
-	// These routes run global middleware but are not spec-validated.
-	// Generated resources use API instead.
-	Mounts []func(chi.Router)
+	// resource. Routes outside api/openapi.yaml go on BaseRouter and are
+	// neither spec-validated nor authenticated.
+	API    api.ServerInterface
 	Config RouterConfig
 }
 
@@ -104,10 +101,6 @@ func NewRouter(deps RouterDeps) (http.Handler, error) {
 		// request, without which the problem response carries no trace ID.
 		ErrorHandlerWithOpts: validationErrorHandler,
 	})
-
-	for _, mount := range deps.Mounts {
-		mount(r)
-	}
 
 	if deps.API == nil {
 		deps.API = api.Unimplemented{}

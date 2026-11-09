@@ -237,7 +237,7 @@ func TestRecoveryDirectoriesAreIgnoredButProvenanceIsTracked(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), ignore, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{".forge-init-recovery/manifest.json", ".forge-init-backup-123/original.txt", ".forge-init-retired-123/file", ".forge-new-123/file"} {
+	for _, path := range []string{".forge-init-recovery/manifest.json", ".forge-init-backup-123/original.txt", ".forge-init-retired-123/file", ".forge-new-123/file", ".forge-resource.lock"} {
 		if got := fixtureGit(t, dir, "check-ignore", path); got != path {
 			t.Fatalf("backup path must be ignored: %s", path)
 		}

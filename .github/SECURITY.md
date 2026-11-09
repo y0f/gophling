@@ -17,12 +17,14 @@ acknowledgement within a few days.
 
 - `govulncheck` runs in CI and fails on reachable vulnerabilities.
 - GitHub Actions are pinned to commit SHAs, and Dependabot keeps them current.
+<!-- forge:begin release -->
 - Release checksums are signed with cosign keyless signing; archives ship an SBOM.
 - Uploaded artifacts, signatures, and applicable provenance are verified while
   the release is still a draft. Published immutable releases are verified on
   reruns without replacing assets. See [the release workflow](RELEASING.md).
 - Public GitHub.com releases publish build provenance attestations identifying
-  the workflow and source revision. See [release verification](../README.md#verify-a-release).
+  the workflow and source revision. See [release verification](RELEASING.md#verify-a-release).
+<!-- forge:end release -->
 - Bearer tokens are verified against JWKS (OIDC) or a configured public key;
   the development fallback key is never used outside the development environment.
 - Logs pass through a redaction handler that scrubs known sensitive keys.

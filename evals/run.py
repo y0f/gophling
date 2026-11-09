@@ -477,7 +477,7 @@ def evaluate(args, task, attempt, sha, verifier, version):
         capture(["git", "clone", "--quiet", "--no-hardlinks", str(args.source), str(workspace)],
                 args.source, args.verify_timeout)
         capture(["git", "checkout", "--quiet", "--detach", sha], workspace, args.verify_timeout)
-        initialize = run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/eval/app"],
+        initialize = run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/eval/app", "-with", "outbox,idempotency,otlp,admin,release"],
                          workspace, directory / "initialize.log", args.verify_timeout)
         record["steps"].append(initialize)
         if initialize["exit_code"] != 0:
@@ -498,8 +498,7 @@ def evaluate(args, task, attempt, sha, verifier, version):
             # reference so the grader cannot silently bootstrap on its behalf.
             (workspace / "bin").rename(directory / "bootstrap-reference")
         if task["id"] == "second_resource":
-            for number, command in enumerate((["go", "run", "./cmd/forge", "add", "resource", "Note"],
-                                              [str(workspace / "bin" / ("task.exe" if os.name == "nt" else "task")), "generate"])):
+            for number, command in enumerate((["go", "run", "./cmd/forge", "add", "resource", "Note"],)):
                 step = run(command, workspace, directory / f"seed-{number}.log", args.verify_timeout)
                 record["steps"].append(step)
                 if step["exit_code"] != 0:

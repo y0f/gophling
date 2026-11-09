@@ -230,7 +230,7 @@ def main():
         recorder.run(["git", "clone", "--quiet", "--no-hardlinks", str(source), str(workspace)])
         recorder.workspace = workspace
         recorder.run(["git", "checkout", "--quiet", "--detach", metadata["source_commit"]])
-        recorder.run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/demo/app"])
+        recorder.run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/demo/app", "-with", "outbox,idempotency,otlp,admin,release"])
         recorder.run(["go", "run", "./cmd/dev", "bootstrap"])
         metadata["go"] = capture(["go", "version"])
         metadata["tools_go_mod_sha256"] = hashlib.sha256((workspace / "tools/go.mod").read_bytes()).hexdigest()
@@ -240,8 +240,7 @@ def main():
                       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=", "commit", "--quiet", "--no-verify",
                       "-m", "test: prepare local demonstration fixture"])
         metadata["fixture_commit"] = capture(["git", "rev-parse", "HEAD"])
-        for command in (["go", "run", "./cmd/forge", "add", "resource", "Note"],
-                        ["go", "run", "./cmd/dev", "generate"], ["go", "run", "./cmd/dev", "check"],
+        for command in (["go", "run", "./cmd/forge", "add", "resource", "Note"], ["go", "run", "./cmd/dev", "check"],
                         ["git", "add", "-N", "."], ["git", "diff", "--stat"]):
             recorder.run(command, visible=True)
         metadata["status"] = "passed"

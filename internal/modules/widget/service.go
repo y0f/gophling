@@ -34,6 +34,9 @@ func (s *Service) Create(ctx context.Context, actor auth.Principal, in Input) (d
 	if err := s.authorizeWrite(actor); err != nil {
 		return db.Widget{}, err
 	}
+	if err := in.Validate(); err != nil {
+		return db.Widget{}, err
+	}
 	return s.repo.Create(ctx, in)
 }
 
@@ -47,6 +50,9 @@ func (s *Service) List(ctx context.Context, limit, offset int32) ([]db.Widget, i
 
 func (s *Service) Update(ctx context.Context, actor auth.Principal, id uuid.UUID, in Input) (db.Widget, error) {
 	if err := s.authorizeWrite(actor); err != nil {
+		return db.Widget{}, err
+	}
+	if err := in.Validate(); err != nil {
 		return db.Widget{}, err
 	}
 	return s.repo.Update(ctx, id, in)

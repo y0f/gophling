@@ -3,13 +3,13 @@
 ```sh
 go test ./...
 go run ./cmd/dev check
-./bin/task test:integration
+go test -tags integration -count=1 ./...
 ```
 
 | Failure | Check first |
 | --- | --- |
 | Missing/wrong tool | Bootstrap; use tools from `bin` |
-| Generated drift | Fix the SQL/OpenAPI source, then `task generate` |
+| Generated drift | Fix the SQL/OpenAPI source, then `go run ./cmd/dev generate` |
 | Postgres unavailable | `go run ./cmd/dev doctor -integration`; Docker or test database URL |
 | Migration failure | Ordering, duplicate versions, and SQL against a fresh database |
 | HTTP 401 | Token signature, issuer, audience, expiry |
@@ -25,8 +25,7 @@ Keep a regression test for the observed failure. Do not disable checks or edit
 generated code to make a test pass. Investigate blocked I/O and missing cleanup
 before extending timeouts.
 
-`go run ./cmd/dev ci` is the full local gate. CI also exercises its Go/OS matrix
-and release configuration.
+`go run ./cmd/dev ci` is the full local gate. CI also exercises its Go/OS matrix.
 <!-- forge:begin init -->
 Scaffold CI additionally tests initialized presets and generated resources.
 <!-- forge:end init -->

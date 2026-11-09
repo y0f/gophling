@@ -188,13 +188,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        drop:
+        options:
+          - "-with outbox,idempotency,otlp,admin,release"
+          - "-drop example"
           - ""
-          - "example,outbox,idempotency,otlp,admin"
-          - "outbox,idempotency,otlp,admin"
-          - "example"
-          - "example,idempotency,otlp,admin"
-          - "example,outbox,otlp,admin"
+          - "-with outbox,idempotency,otlp,admin,release -drop example"
+          - "-with outbox -drop example"
+          - "-with idempotency -drop example"
     steps:
       - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
@@ -206,10 +206,8 @@ jobs:
           cache-dependency-path: |
             go.sum
             tools/go.sum
-      - run: go run ./cmd/forge init -yes -module github.com/example/app -drop "${{ matrix.drop }}"
+      - run: go run ./cmd/forge init -yes -module github.com/example/app ${{ matrix.options }}
       - run: go run ./cmd/forge add resource Order
-      - run: go -C tools build -o ../bin/ github.com/go-task/task/v3/cmd/task
-      - run: ./bin/task generate
       - run: go -C tools build -o ../bin/ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
       - run: ./bin/golangci-lint run ./...
       - run: go test ./...
@@ -247,12 +245,14 @@ jobs:
       - run: docker compose -f deployments/docker-compose.yml config --quiet
       # forge:begin otlp
       # Architecture-specific tags can pull on CI while breaking ARM developers.
+      - run: python -m unittest discover -s .github/scripts -p 'test_check_image_platforms.py'
       - run: python .github/scripts/check_image_platforms.py deployments/docker-compose.yml otel-collector
       # forge:end otlp
       # config never resolves image references, so an image bump to a tag that
       # does not exist would still reach main and only fail at `task up`.
       - run: docker compose -f deployments/docker-compose.yml pull --quiet
 
+  # forge:begin release
   release-config:
     runs-on: ubuntu-latest
     steps:
@@ -260,7 +260,7 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: python -m unittest discover -s .github/scripts -p 'test_*.py'
+      - run: python -m unittest discover -s .github/scripts -p 'test_release.py'
       # release.yml only runs on a tag, so a broken .goreleaser.yaml would first
       # surface during a release. Validate it here with the same action and
       # pinned version the release itself uses.
@@ -268,6 +268,7 @@ jobs:
         with:
           version: v2.20.0
           args: check
+  # forge:end release
 
   vuln:
     runs-on: ubuntu-latest

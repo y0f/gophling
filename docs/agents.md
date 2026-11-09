@@ -5,6 +5,15 @@ available across clients; the application has no model or agent dependency.
 
 ## Instruction loading
 
+`CLAUDE.md` and `GEMINI.md` import `AGENTS.md`; Codex, Cursor, and Copilot
+agents read it natively. Copilot surfaces without `AGENTS.md` support, such as
+IDE code review, read `.github/copilot-instructions.md`, which summarizes the
+same rules. For another client, load `AGENTS.md` through its
+repository-instruction feature and confirm it was read before delegating work.
+Provider settings still control tools, network access, permissions, and
+available models.
+<!-- forge:begin init -->
+
 Checked against official documentation on November 7, 2026. These are
 instruction-loading paths, not claims that every client passed the evaluations.
 
@@ -15,16 +24,7 @@ instruction-loading paths, not claims that every client passed the evaluations.
 | Gemini CLI | `GEMINI.md` imports `@./AGENTS.md`; use `/memory show` to inspect [loaded context](https://geminicli.com/docs/cli/gemini-md/) |
 | Copilot | `AGENTS.md` for supported agents; `.github/copilot-instructions.md` for other [supported surfaces](https://docs.github.com/en/copilot/reference/custom-instructions-support) |
 | Cursor | Uses root `AGENTS.md` as [project instructions](https://cursor.com/docs/rules#agentsmd) |
-
-Claude Code 2.1.277+ can read `AGENTS.md` directly when project or ancestor
-Claude instruction files do not take precedence. The explicit `@AGENTS.md`
-import supports older clients and sessions without native loading, is
-deduplicated, and avoids symlinks on Windows. Use `/context all` to confirm
-loaded memory files.
-
-For another client, load `AGENTS.md` through its repository-instruction feature.
-Confirm the file was read before delegating work. Provider settings still control
-tools, network access, permissions, and available models.
+<!-- forge:end init -->
 
 ## Local setup
 
@@ -38,15 +38,15 @@ go run ./cmd/dev check
 
 Bootstrap builds the tools pinned in `tools/go.mod` into `bin` with Go 1.27.3,
 downloading that toolchain if needed. The first run needs network access.
-Use `./bin/task` on Linux/macOS and `./bin/task.exe` on
-Windows if Task is not on PATH. Start your coding agent in the repository root
-and ask it to summarize the instructions to confirm they loaded.
+Start your coding agent in the repository root and ask it to summarize the
+instructions to confirm they loaded. For humans, `./bin/task` (Windows:
+`./bin/task.exe`) offers the same commands as Task targets.
 
 | Check | Extra requirement |
 | --- | --- |
 | `go run ./cmd/dev check` | None after dependency download and bootstrap |
-| `task test:integration` | Docker or `FORGE_TEST_DATABASE_URL` |
-| `task test:race` | A C compiler |
+| `go test -tags integration -count=1 ./...` | Docker or `FORGE_TEST_DATABASE_URL` |
+| `go test -race ./...` | `CGO_ENABLED=1` and a C compiler |
 | `go run ./cmd/dev ci` | Docker, C compiler, network for vulnerability data |
 
 The fast check creates temporary Git repositories, replaces files, and starts
@@ -71,9 +71,6 @@ Plain chat sessions need a checkout and execution tools to run these checks.
 ## Parallel work
 
 Use [the worktree workflow](workflows/parallel.md): workers own independent
-modules, while one coordinator integrates shared contracts, migrations, SQL
-registration, and wiring. Each worktree keeps its own `bin`; Go's caches can
-be shared. Run focused checks in workers and the full gate on the integrated
-tree.
+modules, while one coordinator integrates shared contracts and wiring.
 
 A handoff should state the behavior changed, checks run, and remaining limits.

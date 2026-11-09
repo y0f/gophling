@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -129,7 +130,6 @@ func addResource(res resource, dryRun bool) error {
 	for _, c := range changes {
 		fmt.Println("updated", c.path)
 	}
-	printNextSteps(res)
 	return nil
 }
 
@@ -303,6 +303,11 @@ func writeChange(c change) error {
 // Resource names become package names and public API declarations. Reject
 // collisions before touching sources, including declarations in customized codegen.
 func validateResourceName(res resource) error {
+	for _, r := range res.Snake {
+		if r > unicode.MaxASCII {
+			return fmt.Errorf("resource %q must use ASCII letters and digits only (OpenAPI component names allow [a-zA-Z0-9._-])", res.Pascal)
+		}
+	}
 	if !token.IsIdentifier(res.Snake) || token.Lookup(res.Snake).IsKeyword() {
 		return fmt.Errorf("resource %q does not produce a valid Go package name", res.Pascal)
 	}
@@ -318,6 +323,8 @@ func validateResourceName(res resource) error {
 	switch res.Snake {
 	case "con", "prn", "aux", "nul":
 		return fmt.Errorf("resource %s uses a reserved Windows directory name", res.Pascal)
+	case "main", "internal", "testdata":
+		return fmt.Errorf("resource %s maps to Go package directory %q, which Go treats specially (program, internal-only, or excluded from ./...); choose a different name", res.Pascal, res.Snake)
 	}
 	if len(res.Snake) == 4 && (strings.HasPrefix(res.Snake, "com") || strings.HasPrefix(res.Snake, "lpt")) && res.Snake[3] >= '1' && res.Snake[3] <= '9' {
 		return fmt.Errorf("resource %s uses a reserved Windows directory name", res.Pascal)

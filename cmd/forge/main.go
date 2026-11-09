@@ -10,7 +10,7 @@
 //
 //	forge add resource <Name>
 //
-// After adding a resource, run `task generate` and apply its migration.
+// add resource runs `go run ./cmd/dev generate` unless -no-generate is given.
 package main
 
 import (
@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ var templateFS embed.FS
 // forge binary built elsewhere still writes the project's own import paths.
 const moduleName = "github.com/y0f/gophling/v2"
 
-var usage = "usage: forge add resource <Name> [-dry-run]"
+var usage = "usage: forge add resource <Name> [-dry-run] [-no-generate]"
 
 type resource struct {
 	Pascal string
@@ -76,13 +77,31 @@ func run(args []string) error {
 
 	flags := flag.NewFlagSet("forge add resource", flag.ContinueOnError)
 	dryRun := flags.Bool("dry-run", false, "validate and list changes without writing files")
+	noGen := flags.Bool("no-generate", false, "skip go run ./cmd/dev generate (batch several resources, then generate once)")
 	if err := flags.Parse(args[3:]); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 {
 		return errors.New(usage)
 	}
-	return addResource(res, *dryRun)
+	if err := addResource(res, *dryRun); err != nil || *dryRun {
+		return err
+	}
+	if !*noGen {
+		fmt.Println("running go run ./cmd/dev generate")
+		if err := runGenerate(); err != nil {
+			return fmt.Errorf("files written; generate failed: %w\nfix the cause (run go run ./cmd/dev bootstrap if ./bin tools are missing), then rerun: go run ./cmd/dev generate", err)
+		}
+	}
+	printNextSteps(res, !*noGen)
+	return nil
+}
+
+// runGenerate is a variable so tests can stub the go run subprocess.
+var runGenerate = func() error {
+	c := exec.Command("go", "run", "./cmd/dev", "generate") //#nosec G204 -- fixed command
+	c.Stdout, c.Stderr = os.Stdout, os.Stderr
+	return c.Run()
 }
 
 const sqlcConfig = "sqlc.yaml"
@@ -143,16 +162,19 @@ func nextMigrationVersion(dir string) (string, error) {
 	return fmt.Sprintf("%05d", highest+1), nil
 }
 
-func printNextSteps(res resource) {
+func printNextSteps(res resource, generated bool) {
+	status, generate := "", "  0. go run ./cmd/dev generate\n"
+	if generated {
+		status, generate = "; generated code is up to date", ""
+	}
 	fmt.Printf(`
-Registered /v1/%s in api/openapi.yaml and cmd/api/resources.go.
+Registered /v1/%s in api/openapi.yaml and cmd/api/resources.go%s.
 Next steps:
-  1. go run ./cmd/dev generate
-  2. Grant %q to the roles that may write in internal/auth/principal.go,
+%s  1. Grant %q to the roles that may write in internal/auth/principal.go,
      or issue a token carrying that scope. Writes remain denied otherwise.
-  3. go run ./cmd/migrate up
-  4. go run ./cmd/dev check
-`, res.Table, res.Table+":write")
+  2. go run ./cmd/dev check
+Migrations apply automatically in integration tests; ./bin/task migrate applies them to the dev DB (reads FORGE_DB_URL from .env).
+`, res.Table, status, generate, res.Table+":write")
 }
 
 // projectModule returns the module path declared in ./go.mod, falling back to

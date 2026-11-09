@@ -2,13 +2,15 @@
 
 ```sh
 go run ./cmd/forge add resource Note
-./bin/task generate
 ```
 
 The generator adds `internal/modules/note`, a migration, SQL registration,
-OpenAPI operations, tests, and composition wiring. List, create, get, update,
-and delete use the same contract and pagination conventions as the API.
-Add `-dry-run` to inspect the planned files before writing them.
+OpenAPI operations, tests, and composition wiring, then runs
+`go run ./cmd/dev generate`. List, create, get, update, and delete use the same
+contract and pagination conventions as the API. Add `-dry-run` to inspect the
+planned files before writing them, or `-no-generate` to add several resources
+before generating once. Names must be ASCII; `main`, `internal`, and `testdata`
+are rejected.
 Generated SQL identifiers must fit PostgreSQL's 63-byte limit, including the
 `_list_idx` suffix; shorten names rejected by preflight. SQL names are quoted,
 so resource names such as `Reference` can use reserved words as table names.
@@ -26,12 +28,13 @@ before retrying. Separate worktrees avoid sharing that lock.
 2. Update query SQL, migrations, and OpenAPI schemas for the data model.
 3. Choose access rules. Reads are public; writes require `notes:write`.
    Issue that scope or grant it to selected roles in `internal/auth/principal.go`.
-4. Run `task generate` after SQL or contract edits.
+4. Run `go run ./cmd/dev generate` after SQL or contract edits.
 5. Test successful requests, invalid input, and denied access.
-6. Run `go run ./cmd/dev check`, `task test:integration`, and `task migrate`.
+6. Run `go run ./cmd/dev check` and `go test -tags integration -count=1 ./...`.
+   Integration tests apply migrations to isolated databases.
 
-`task migrate` requires `FORGE_DB_URL`. For local development, copy `.env.example`
-to `.env` and set the database URL there; Task loads this file.
+To migrate your development database, copy `.env.example` to `.env` and run
+`./bin/task migrate`.
 
 The logged development token has the `admin` role. For local Note writes, add
 `notes:write` to that role's existing grants in `internal/auth/principal.go`

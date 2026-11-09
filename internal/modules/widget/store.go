@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	db "github.com/y0f/gophling/v2/internal/gen/db"
+	"github.com/y0f/gophling/v2/internal/idempotency"
 	"github.com/y0f/gophling/v2/internal/outbox"
 	"github.com/y0f/gophling/v2/internal/platform/database"
 )
@@ -20,7 +21,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, in Input) (db.Widget, error)
 	//forge:begin idempotency
-	CreateIdempotent(ctx context.Context, in Input, claim IdempotencyClaim) (db.Widget, error)
+	CreateIdempotent(ctx context.Context, in Input, claim idempotency.Claim) (db.Widget, error)
 	//forge:end idempotency
 	Get(ctx context.Context, id uuid.UUID) (db.Widget, error)
 	List(ctx context.Context, limit, offset int32) ([]db.Widget, int64, error)

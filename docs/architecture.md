@@ -70,7 +70,7 @@ Every log line and problem response carries the trace ID of the active span, so
 a log backend can link a line to its trace. Metrics are exposed at `/metrics`
 for Prometheus.
 <!-- forge:begin otlp -->
-Spans are exported when `FORGE_OTEL_OTLP_ENDPOINT` is set; `task observe` runs
+Spans are exported when `FORGE_OTEL_OTLP_ENDPOINT` is set; `./bin/task observe` runs
 a Collector, Tempo, Prometheus and Grafana to receive them.
 <!-- forge:end otlp -->
 

@@ -2,7 +2,8 @@
 // a client-supplied Idempotency-Key, so retries do not duplicate side effects.
 // The key is written in the same transaction as the state change it guards,
 // which makes concurrent retries safe as well as sequential ones. This package
-// owns lookup, hashing, and the time-to-live.
+// owns lookup, hashing, and the time-to-live, and in claim.go the HTTP side a
+// resource's create shares: claiming a key, replaying, and storing a response.
 package idempotency
 
 import (
@@ -38,9 +39,6 @@ type Store struct {
 func NewStore(pool *pgxpool.Pool, ttl time.Duration) *Store {
 	return &Store{pool: pool, ttl: ttl}
 }
-
-// TTL is how long a stored key remains replayable.
-func (s *Store) TTL() time.Duration { return s.ttl }
 
 // Hash derives the request fingerprint compared across retries of a key. Each
 // part is length-prefixed so that part boundaries cannot alias.

@@ -25,8 +25,8 @@ contract and migration entries, regenerates, and checks that baseline. Review
 and commit it before starting independent feature edits.
 
 ```sh
-go run ./cmd/forge add resource Note
-go run ./cmd/forge add resource Label
+go run ./cmd/forge add resource Note -no-generate
+go run ./cmd/forge add resource Label -no-generate
 go run ./cmd/dev generate
 go run ./cmd/dev check
 ```
@@ -49,9 +49,9 @@ By default, initialization derives a stable Compose project name from the full
 Go module path. Moving a checkout keeps that name; worktrees of the same app share it.
 Prefer one coordinator-owned development stack while workers use isolated test
 databases. A simultaneous worker stack needs a unique `COMPOSE_PROJECT_NAME` and
-different `FORGE_DEV_API_PORT` and `FORGE_DEV_DB_PORT` values in its untracked
-`.env`; Task loads them. If running `task migrate` on the host, also match
-`FORGE_DB_URL` to that database port.
+different `FORGE_DEV_API_PORT` and `FORGE_DEV_DB_PORT` values, plus a
+`FORGE_DB_URL` that uses that port, in its untracked `.env`, which
+`./bin/task up` and `./bin/task migrate` load.
 <!-- forge:begin otlp -->
 For simultaneous observability stacks, also choose different
 `FORGE_DEV_OTLP_PORT`, `FORGE_DEV_COLLECTOR_METRICS_PORT`,
@@ -62,10 +62,9 @@ selects a different volume; it does not move or delete existing data.
 
 ## Integrate and verify
 
-1. Each worker runs `go fmt ./internal/modules/<name>` and its package tests,
-   then hands off the diff, exact test outcomes, shared-file requests, and
-   unresolved decisions. The coordinator's full lint still checks gofumpt and
-   goimports formatting.
+1. Each worker runs `go run ./cmd/dev fmt ./internal/modules/<name>/...` and
+   `go test ./internal/modules/<name>/...`, then hands off the diff, exact test
+   outcomes, shared-file requests, and unresolved decisions.
 2. The coordinator reviews each change and integrates sources one at a time.
    Only renumber migrations that have never been applied. Resolve duplicate
    versions before running migrations or generating SQL bindings.

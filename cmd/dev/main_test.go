@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -317,6 +318,61 @@ func TestMigrationVersionsAllowGapsAndEmptyProjects(t *testing.T) {
 	}
 	if err := checkMigrationVersions("migrations"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestFmtCommandDefaultsToTheWholeModule(t *testing.T) {
+	lint := toolPath("golangci-lint")
+	if got := fmtCommand(nil); !slices.Equal(got, []string{lint, "fmt", "./..."}) {
+		t.Errorf("fmtCommand(nil) = %v", got)
+	}
+	if got := fmtCommand([]string{"./internal/modules/note/..."}); !slices.Equal(got, []string{lint, "fmt", "./internal/modules/note/..."}) {
+		t.Errorf("fmtCommand(pkg) = %v", got)
+	}
+}
+
+func TestCheckStillTakesNoArguments(t *testing.T) {
+	t.Chdir(t.TempDir())
+	writeFixture(t, "tools/go.mod", "module tools\n")
+	if err := run([]string{"check", "./x/..."}); err == nil || !strings.Contains(err.Error(), "takes no arguments") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestChangedGoFilesKeepsExistingHandWrittenGo(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, name := range []string{"modified.go", "untracked.go", "renamed.go", "internal/gen/api.go", "notes.md"} {
+		writeFixture(t, name, "package x\n")
+	}
+	unstaged := "modified.go\x00untracked.go\x00deleted.go\x00internal/gen/api.go\x00notes.md\x00"
+	staged := "renamed.go\x00modified.go\x00"
+	if got, want := changedGoFiles([]byte(unstaged), []byte(staged)), []string{"modified.go", "untracked.go", "renamed.go"}; !slices.Equal(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	if got := changedGoFiles(nil); got != nil {
+		t.Fatalf("clean tree: got %v", got)
+	}
+}
+
+func TestRunStepsReportsEveryFailingStep(t *testing.T) {
+	var ran []string
+	fake := func(argv ...string) error {
+		ran = append(ran, argv[0])
+		if argv[0] == "lint" || argv[0] == "test" {
+			return errors.New("exit status 1")
+		}
+		return nil
+	}
+	steps := []step{{"lint", []string{"lint"}}, {"vet", []string{"vet"}}, {"test", []string{"test"}}}
+	err := runSteps(fake, steps...)
+	if err == nil || err.Error() != "check failed: lint, test" {
+		t.Fatalf("got %v", err)
+	}
+	if !slices.Equal(ran, []string{"lint", "vet", "test"}) {
+		t.Fatalf("every step must run in order: %v", ran)
+	}
+	if err := runSteps(func(...string) error { return nil }, steps...); err != nil {
+		t.Fatalf("passing steps: %v", err)
 	}
 }
 

@@ -56,13 +56,6 @@ func withHolder(ctx context.Context) context.Context {
 	return context.WithValue(ctx, contextKey{}, &holder{})
 }
 
-// withPrincipal returns a context carrying p as the authenticated principal, for
-// middleware that resolves the principal up front rather than through the
-// seed-then-fill OpenAPI validation flow.
-func withPrincipal(ctx context.Context, p Principal) context.Context {
-	return context.WithValue(ctx, contextKey{}, &holder{principal: &p})
-}
-
 func holderFrom(ctx context.Context) (*holder, bool) {
 	h, ok := ctx.Value(contextKey{}).(*holder)
 	return h, ok

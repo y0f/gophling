@@ -19,8 +19,8 @@ import (
 func TestGeneratedProjects(t *testing.T) {
 	_, source, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(source), "../.."))
-	for _, preset := range []struct{ name, drop string }{
-		{"full", ""}, {"minimal", "example,outbox,idempotency,otlp,admin"},
+	for _, preset := range []struct{ name, with, drop string }{
+		{"full", "outbox,idempotency,otlp,admin,release", ""}, {"minimal", "", "example"},
 	} {
 		t.Run(preset.name, func(t *testing.T) {
 			dir := t.TempDir()
@@ -49,12 +49,12 @@ func TestGeneratedProjects(t *testing.T) {
 			if preset.name == "full" {
 				module += "/v2"
 			}
-			generatorCommand(t, dir, "go", "run", "./cmd/forge", "init", "-yes", "-module", module, "-drop", preset.drop)
+			generatorCommand(t, dir, "go", "run", "./cmd/forge", "init", "-yes", "-module", module, "-with", preset.with, "-drop", preset.drop)
 			generatorCommand(t, dir, "git", "add", "--all")
 			generatorCommand(t, dir, "git", "diff", "--cached", "--check")
 			generatorCommand(t, dir, "go", "run", "./cmd/dev", "check")
 			for _, resource := range []string{"Order", "Category", "Api", "Http", "Idempotency", "Store", "AuditTest", "InvoiceLinux", "Reference", "Value", strings.Repeat("A", 53)} {
-				generatorCommand(t, dir, "go", "run", "./cmd/forge", "add", "resource", resource)
+				generatorCommand(t, dir, "go", "run", "./cmd/forge", "add", "resource", resource, "-no-generate")
 			}
 			generatorCommand(t, dir, "go", "run", "./cmd/dev", "generate")
 			grader, err := render("journey_test.go.tmpl", resource{Module: module, Idempotency: preset.name == "full"})

@@ -2,12 +2,9 @@ package widget
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,35 +12,7 @@ import (
 	db "github.com/y0f/gophling/v2/internal/gen/db"
 	"github.com/y0f/gophling/v2/internal/idempotency"
 	"github.com/y0f/gophling/v2/internal/platform/database"
-	"github.com/y0f/gophling/v2/internal/platform/problem"
 )
-
-// IdempotencyClaim ties a create to a client-supplied Idempotency-Key. The key
-// is inserted in the same transaction as the widget, so a concurrent retry that
-// loses the race is rolled back rather than creating a duplicate.
-type IdempotencyClaim struct {
-	Key  string
-	Hash string
-	TTL  time.Duration
-}
-
-// ErrIdempotencyReserved means another request already claimed the key; the
-// caller should replay the stored response.
-var ErrIdempotencyReserved = errors.New("idempotency key already reserved")
-
-// maxIdempotencyKeyLen bounds the header, which is stored as the row key.
-const maxIdempotencyKeyLen = 255
-
-// subjectEscaper removes ':' from the subject, so the first ':' in a row key
-// always ends the subject: subject "a" with key "b:c" and subject "a:b" with
-// key "c" no longer share the row key "a:b:c". Subjects without ':' or '%'
-// keep the row key they had before the escaping was added.
-var subjectEscaper = strings.NewReplacer("%", "%25", ":", "%3A")
-
-// idempotencyRowKey is the stored key for a caller's Idempotency-Key.
-func idempotencyRowKey(subject, key string) string {
-	return subjectEscaper.Replace(subject) + ":" + key
-}
 
 // EnableIdempotency makes CreateWidget honour the Idempotency-Key header.
 func (h *Handler) EnableIdempotency(store *idempotency.Store) {
@@ -59,34 +28,13 @@ func (h *Handler) createIdempotent(w http.ResponseWriter, r *http.Request, actor
 		h.writeError(w, r, err)
 		return
 	}
-	if len(key) > maxIdempotencyKeyLen {
-		problem.Status(w, r, http.StatusBadRequest, "Idempotency-Key exceeds 255 characters")
-		return
-	}
-	// Keys are scoped to the caller's subject. Every token without a "sub"
-	// claim would share one namespace, so one such caller could be served
-	// another's stored response; refuse rather than mix them up.
-	if actor.Subject == "" {
-		problem.Status(w, r, http.StatusBadRequest, "Idempotency-Key requires a token with a subject (sub) claim")
-		return
-	}
-	// Scoped to the caller: the stored key is a global primary key, so two
-	// principals picking the same Idempotency-Key value would otherwise
-	// collide, and one would be served the other's stored response.
-	claim := IdempotencyClaim{
-		Key:  idempotencyRowKey(actor.Subject, key),
-		Hash: idempotency.Hash([]byte(actor.Subject), []byte(r.URL.Path), body),
-		TTL:  h.idempotency.TTL(),
-	}
-	if h.maybeReplay(w, r, claim) {
+	claim, ok := h.idempotency.NewClaim(w, r, actor.Subject, key, body)
+	if !ok || h.idempotency.Replay(w, r, claim, "/v1/widgets/") {
 		return
 	}
 	created, err := h.service.CreateIdempotent(r.Context(), actor, in, claim)
-	if errors.Is(err, ErrIdempotencyReserved) {
-		// A concurrent request claimed the key first; replay its stored response.
-		if h.maybeReplay(w, r, claim) {
-			return
-		}
+	if errors.Is(err, idempotency.ErrReserved) && h.idempotency.Replay(w, r, claim, "/v1/widgets/") {
+		return // A concurrent request claimed the key first.
 	}
 	if err != nil {
 		h.writeError(w, r, err)
@@ -95,42 +43,11 @@ func (h *Handler) createIdempotent(w http.ResponseWriter, r *http.Request, actor
 	writeCreated(w, created)
 }
 
-// maybeReplay writes the stored response for the claim when one exists. It
-// returns true when it has written a response (a replay or a 409).
-func (h *Handler) maybeReplay(w http.ResponseWriter, r *http.Request, claim IdempotencyClaim) bool {
-	record, err := h.idempotency.Lookup(r.Context(), claim.Key, claim.Hash)
-	switch {
-	case errors.Is(err, idempotency.ErrConflict):
-		problem.Status(w, r, http.StatusConflict, "idempotency key already used for a different request")
-		return true
-	case err != nil:
-		h.writeError(w, r, err)
-		return true
-	case record != nil:
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Idempotency-Replayed", "true")
-		if id := widgetIDFromBody(record.Body); id != "" {
-			w.Header().Set("Location", "/v1/widgets/"+id)
-		}
-		w.WriteHeader(record.Status)
-		// A previously stored JSON response, served back as application/json.
-		_, _ = w.Write(record.Body) //#nosec G705
-		return true
-	default:
-		return false
-	}
-}
-
-func widgetIDFromBody(body []byte) string {
-	var probe struct {
-		ID string `json:"id"`
-	}
-	_ = json.Unmarshal(body, &probe)
-	return probe.ID
-}
-
-func (s *Service) CreateIdempotent(ctx context.Context, actor auth.Principal, in Input, claim IdempotencyClaim) (db.Widget, error) {
+func (s *Service) CreateIdempotent(ctx context.Context, actor auth.Principal, in Input, claim idempotency.Claim) (db.Widget, error) {
 	if err := s.authorizeWrite(actor); err != nil {
+		return db.Widget{}, err
+	}
+	if err := in.Validate(); err != nil {
 		return db.Widget{}, err
 	}
 	return s.repo.CreateIdempotent(ctx, in, claim)
@@ -138,38 +55,20 @@ func (s *Service) CreateIdempotent(ctx context.Context, actor auth.Principal, in
 
 // CreateIdempotent persists the widget and its idempotency key in one
 // transaction. If a concurrent request already holds the key the create is
-// rolled back and ErrIdempotencyReserved is returned, so the caller replays the
-// stored response instead of creating a duplicate.
-func (r *pgRepository) CreateIdempotent(ctx context.Context, in Input, claim IdempotencyClaim) (db.Widget, error) {
+// rolled back and idempotency.ErrReserved is returned, so the caller replays
+// the stored response instead of creating a duplicate.
+func (r *pgRepository) CreateIdempotent(ctx context.Context, in Input, claim idempotency.Claim) (db.Widget, error) {
 	var created db.Widget
 	err := database.WithinTx(ctx, r.pool, func(tx pgx.Tx) error {
 		var txErr error
-		created, txErr = r.insert(ctx, tx, in)
-		if txErr != nil {
+		if created, txErr = r.insert(ctx, tx, in); txErr != nil {
 			return txErr
 		}
-		body, txErr := json.Marshal(toAPIWidget(created))
-		if txErr != nil {
-			return txErr
-		}
-		rows, txErr := db.New(tx).PutIdempotencyKey(ctx, db.PutIdempotencyKeyParams{
-			Key:            claim.Key,
-			RequestHash:    claim.Hash,
-			ResponseStatus: http.StatusCreated,
-			ResponseBody:   body,
-			ExpiresAt:      time.Now().Add(claim.TTL),
-		})
-		if txErr != nil {
-			return txErr
-		}
-		if rows == 0 {
-			return ErrIdempotencyReserved
-		}
-		return nil
+		return idempotency.Put(ctx, tx, claim, http.StatusCreated, toAPIWidget(created))
 	})
 	switch {
-	case errors.Is(err, ErrIdempotencyReserved):
-		return db.Widget{}, ErrIdempotencyReserved
+	case errors.Is(err, idempotency.ErrReserved):
+		return db.Widget{}, idempotency.ErrReserved
 	case err != nil:
 		return db.Widget{}, fmt.Errorf("create widget: %w", err)
 	}

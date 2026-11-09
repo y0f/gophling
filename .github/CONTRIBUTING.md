@@ -10,7 +10,7 @@ go run ./cmd/dev check
 
 The generators are built on the Go release pinned by `toolchain` in
 `tools/go.mod`, because the embedded OpenAPI spec is compressed by the release
-that built the generator. `task setup` handles it; never run the generators off
+that built the generator. Bootstrap handles it; never run the generators off
 `$PATH`.
 
 ## Before opening a pull request
@@ -22,15 +22,14 @@ go run ./cmd/dev ci
 ```
 
 This includes the fast check, vulnerability scan, race and integration tests,
-and container checks. CI also runs its platform and Go-version matrices and
-release-config validation.
+and container checks. CI also runs its platform and Go-version matrices.
 <!-- forge:begin init -->
 The scaffold also tests initialized presets and generated resources.
 <!-- forge:end init -->
 See [testing](../docs/workflows/testing.md) for prerequisites and focused checks.
 
-If you change SQL or the OpenAPI spec, run `task generate` and commit the
-output. CI fails if `internal/gen` is out of date with its sources.
+If you change SQL or the OpenAPI spec, run `go run ./cmd/dev generate` and
+commit the output. CI fails if `internal/gen` is out of date with its sources.
 
 ## AI-assisted contributions
 
@@ -49,9 +48,8 @@ certify correctness or transfer the contributor's review responsibility.
 
 Do not include private prompts, conversation transcripts, credentials, or other
 sensitive data in the declaration. Tool names and a brief scope description are
-enough. Do not add AI tools or models as commit authors or `Co-authored-by`
-trailers; disclose assistance in the PR. Ordinary deterministic generators,
-formatters, and linters do not count as AI assistance.
+enough. Ordinary deterministic generators, formatters, and linters do not
+count as AI assistance.
 
 See GitHub's [responsible-use guidance for agents](https://docs.github.com/en/copilot/responsible-use/agents)
 for the limits of generated code and automated review.
@@ -59,7 +57,9 @@ for the limits of generated code and automated review.
 ## GitHub Copilot setup and review
 
 [Copilot instructions](copilot-instructions.md) contain the review checks for
-this repository. Keep them specific and short, following GitHub's
+this repository. Several Copilot surfaces read only that file, not `AGENTS.md`,
+so its summary intentionally repeats `AGENTS.md`; keep the two in sync. Keep
+the instructions specific and short, following GitHub's
 [custom review guidance](https://docs.github.com/en/copilot/tutorials/customize-code-review).
 CI and maintainer review enforce requirements; instructions alone do not.
 
@@ -75,11 +75,12 @@ can leave an agent running with an incomplete environment. See GitHub's
 
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org)
   (`feat:`, `fix:`, `docs:`, ...). Release notes are generated from them.
-- Code is formatted with gofumpt and goimports (`task fmt`).
+- Code is formatted with gofumpt and goimports (`go run ./cmd/dev fmt`).
 - New resources are added with `go run ./cmd/forge add resource <Name>`, one
   package per resource.
-- Edit `api/openapi.yaml` and the `*.sql` files, then run `task generate`. Never
-  edit anything under `internal/gen`; it is generated and CI fails on drift.
+- Edit `api/openapi.yaml` and the `*.sql` files, then run
+  `go run ./cmd/dev generate`. Never edit anything under `internal/gen`; it is
+  generated and CI fails on drift.
 - Handlers are plain `http.Handler`. Authorization lives in the service layer.
 - Add tests for changed behavior. Persistence uses real-Postgres integration
   tests; service rules use unit tests.
