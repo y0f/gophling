@@ -49,9 +49,8 @@ certify correctness or transfer the contributor's review responsibility.
 
 Do not include private prompts, conversation transcripts, credentials, or other
 sensitive data in the declaration. Tool names and a brief scope description are
-enough. Do not add AI tools or models as commit authors or `Co-authored-by`
-trailers; disclose assistance in the PR. Ordinary deterministic generators,
-formatters, and linters do not count as AI assistance.
+enough. Ordinary deterministic generators, formatters, and linters do not
+count as AI assistance.
 
 See GitHub's [responsible-use guidance for agents](https://docs.github.com/en/copilot/responsible-use/agents)
 for the limits of generated code and automated review.

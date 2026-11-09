@@ -32,8 +32,7 @@ transactions, and HTTP behavior. Report checks that could not run.
 - Add regression tests for changed behavior. Keep existing checks intact.
 - Never delete the local database volume (`docker compose down -v`) unless asked.
 - Follow the [contribution policy](.github/CONTRIBUTING.md) for pull requests:
-  complete its required yes/no AI-assistance declaration. Do not name AI tools
-  as authors or coauthors.
+  complete its required yes/no AI-assistance declaration.
 
 ## Task guides
 
