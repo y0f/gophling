@@ -3,13 +3,13 @@
 ```sh
 go test ./...
 go run ./cmd/dev check
-./bin/task test:integration
+go test -tags integration -count=1 ./...
 ```
 
 | Failure | Check first |
 | --- | --- |
 | Missing/wrong tool | Bootstrap; use tools from `bin` |
-| Generated drift | Fix the SQL/OpenAPI source, then `task generate` |
+| Generated drift | Fix the SQL/OpenAPI source, then `go run ./cmd/dev generate` |
 | Postgres unavailable | `go run ./cmd/dev doctor -integration`; Docker or test database URL |
 | Migration failure | Ordering, duplicate versions, and SQL against a fresh database |
 | HTTP 401 | Token signature, issuer, audience, expiry |

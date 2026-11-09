@@ -76,14 +76,14 @@ database volume.
 
 ```sh
 go run ./cmd/forge add resource Note
-./bin/task generate
 go run ./cmd/dev check
 ```
 
 The generator adds a module, migration, SQL queries, OpenAPI operations, tests,
-and route wiring. Reads are public; writes require `notes:write` or an explicit
-role grant. The logged development token has the `admin` role, which gets no
-automatic grant for new resources. Apply the migration before serving the routes.
+and route wiring, then regenerates the bindings. Reads are public; writes
+require `notes:write` or an explicit role grant. The logged development token
+has the `admin` role, which gets no automatic grant for new resources. Apply
+the migration before serving the routes.
 
 Alternatively, ask your coding agent to perform the same change:
 
@@ -91,8 +91,8 @@ Alternatively, ask your coding agent to perform the same change:
 > Test invalid input and denied writes. Regenerate the bindings, then run the
 > fast and integration checks.
 
-[Agent setup](docs/agents.md) covers Claude Code, Codex, Gemini CLI, Copilot,
-and Cursor instruction loading.
+[Agent setup](docs/agents.md) covers instruction loading, local setup, and
+hosted environments.
 [Parallel work](docs/workflows/parallel.md) assigns modules to separate
 worktrees and shared changes to one coordinator.
 [The resource guide](docs/workflows/resource.md) gives the complete workflow.
@@ -143,49 +143,7 @@ enables development mode and its temporary signing key.
 
 ## Verify a release
 
-Replace `TAG` with the downloaded release tag (for example, `v1.3.0`) and
-`OWNER/REPOSITORY` with the GitHub repository that published it.
-<!-- forge:begin init -->
-For gophling releases, the repository is `y0f/gophling`.
-<!-- forge:end init -->
-
-```sh
-cosign verify-blob --bundle checksums.txt.bundle \
-  --certificate-identity 'https://github.com/OWNER/REPOSITORY/.github/workflows/release.yml@refs/tags/TAG' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
-```
-
-Then compare the SHA-256 hash of your downloaded archive with its entry in the
-verified `checksums.txt` before extracting it.
-
-For public GitHub.com releases, also verify the archive's build provenance.
-Replace `ARCHIVE` with the downloaded filename.
-
-```sh
-gh attestation verify ARCHIVE --repo OWNER/REPOSITORY \
-  --signer-workflow OWNER/REPOSITORY/.github/workflows/release.yml \
-  --source-ref refs/tags/TAG
-```
-
-This verifies the artifact's association with the release workflow and source
-tag. The workflow skips GitHub attestations for private repositories;
-enabling them there requires a
-supported GitHub Enterprise Cloud plan. See GitHub's
-[attestation guide](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)
-and [verification options](https://cli.github.com/manual/gh_attestation_verify).
-
-When the release is marked **Immutable**, verify GitHub's release attestation
-and the downloaded asset as well:
-
-```sh
-gh release verify TAG --repo OWNER/REPOSITORY
-gh release verify-asset TAG ARCHIVE --repo OWNER/REPOSITORY
-```
-
-This applies to uploaded release assets, not GitHub's automatically generated
-source ZIP/tarballs. Immutability must be enabled for each repository and applies
-to future releases; it does not protect older releases or custom branch refs.
-See [release operations](.github/RELEASING.md) and GitHub's
-[release verification guide](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/verify-release-integrity).
+Verify downloaded archives with the signed checksums and provenance steps in
+[release operations](.github/RELEASING.md#verify-a-release).
 
 MIT. See [LICENSE](LICENSE).

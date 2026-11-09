@@ -8,26 +8,29 @@ Go HTTP API backed by PostgreSQL. Resources live in `internal/modules/<name>`;
 ```sh
 go run ./cmd/dev bootstrap  # pinned tools; network on first use
 go run ./cmd/dev doctor     # available prerequisites
-go run ./cmd/dev check      # lint, generation, unit tests, build; no database
+go run ./cmd/dev fmt        # gofumpt+goimports; pass packages to scope
+go run ./cmd/dev generate   # regenerate internal/gen from SQL and OpenAPI
+go run ./cmd/dev check      # formats changed files; build, lint, generation, unit tests
+go test -tags integration -count=1 ./...  # Docker or FORGE_TEST_DATABASE_URL
 go run ./cmd/dev ci         # full local gate; Docker and a C compiler
 ```
 
 Use a focused package test while editing. Run the fast check before handing off
-code; use integration tests for SQL, migrations, transactions, and HTTP behavior.
-Report checks that could not run.
+code; it reports every failing step. Use integration tests for SQL, migrations,
+transactions, and HTTP behavior. Report checks that could not run.
 
 ## Boundaries
 
-- Edit `api/openapi.yaml`, migrations, and query SQL; run `task generate`.
+- Edit `api/openapi.yaml`, migrations, and query SQL, then regenerate.
   Never edit `internal/gen` by hand. Use the tools pinned in `tools/go.mod`.
 - Keep authorization in services, before persistence. Authentication alone
   does not grant a resource permission. Generated reads are public; writes
   require an explicit permission. Choose a different policy when needed.
-- Add a resource with `go run ./cmd/forge add resource <Name>`.
+- Add a resource with `go run ./cmd/forge add resource <Name>`; it runs generate.
 - Parallel agents use separate worktrees and own separate modules. One
   coordinator integrates shared contracts, migrations, wiring, and generation.
 - Add regression tests for changed behavior. Keep existing checks intact.
-- `task down` preserves data; `task reset` deletes the local database volume.
+- Never delete the local database volume (`docker compose down -v`) unless asked.
 - Follow the [contribution policy](.github/CONTRIBUTING.md) for pull requests:
   complete its required yes/no AI-assistance declaration. Do not name AI tools
   as authors or coauthors.

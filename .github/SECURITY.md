@@ -22,7 +22,7 @@ acknowledgement within a few days.
   the release is still a draft. Published immutable releases are verified on
   reruns without replacing assets. See [the release workflow](RELEASING.md).
 - Public GitHub.com releases publish build provenance attestations identifying
-  the workflow and source revision. See [release verification](../README.md#verify-a-release).
+  the workflow and source revision. See [release verification](RELEASING.md#verify-a-release).
 - Bearer tokens are verified against JWKS (OIDC) or a configured public key;
   the development fallback key is never used outside the development environment.
 - Logs pass through a redaction handler that scrubs known sensitive keys.
