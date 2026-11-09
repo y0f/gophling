@@ -29,6 +29,9 @@ type slice struct {
 	Name  string
 	Title string
 	Paths []string
+	// OptIn slices are dropped unless named in -with: each adds tables,
+	// background work or services that most APIs do not need on day one.
+	OptIn bool
 }
 
 var slices = []slice{
@@ -46,6 +49,7 @@ var slices = []slice{
 	},
 	{
 		Name:  "outbox",
+		OptIn: true,
 		Title: "Transactional outbox: events written with the state change, relayed by a poller",
 		Paths: []string{
 			"internal/outbox",
@@ -57,6 +61,7 @@ var slices = []slice{
 	},
 	{
 		Name:  "idempotency",
+		OptIn: true,
 		Title: "Idempotency keys: safe retries of create requests via the Idempotency-Key header",
 		Paths: []string{
 			"internal/idempotency",
@@ -71,11 +76,13 @@ var slices = []slice{
 	},
 	{
 		Name:  "otlp",
+		OptIn: true,
 		Title: "OTLP trace export and the Collector, Tempo, Prometheus and Grafana compose profile",
 		Paths: []string{"deployments/observability"},
 	},
 	{
 		Name:  "admin",
+		OptIn: true,
 		Title: "Admin listener: token-gated pprof and expvar on a separate port",
 		Paths: []string{"internal/server/admin.go"},
 	},
@@ -131,6 +138,7 @@ var markerRe = regexp.MustCompile(`\bforge:(begin|end) ([a-z]+)\b`)
 func runInit(args []string) error {
 	fs := flag.NewFlagSet("forge init", flag.ContinueOnError)
 	module := fs.String("module", "", "module path for the project, for example github.com/you/app")
+	with := fs.String("with", "", "comma-separated opt-in slices to keep: "+strings.Join(optInNames(), ","))
 	drop := fs.String("drop", "", "comma-separated slices to remove: "+strings.Join(sliceNames(), ","))
 	yes := fs.Bool("yes", false, "do not prompt (requires -module)")
 	recoverRequested := fs.Bool("recover", false, "restore the pre-init files after an interrupted publication")
@@ -141,7 +149,7 @@ func runInit(args []string) error {
 		return errors.New("forge init accepts flags only")
 	}
 	if *recoverRequested {
-		if *module != "" || *drop != "" || *yes {
+		if *module != "" || *with != "" || *drop != "" || *yes {
 			return errors.New("-recover cannot be combined with initialization options")
 		}
 		root, err := os.Getwd()
@@ -161,14 +169,9 @@ func runInit(args []string) error {
 		return errors.New("run from the repository root of an uninitialised scaffold")
 	}
 
-	dropped := map[string]bool{}
-	for _, name := range strings.Split(*drop, ",") {
-		if name = strings.TrimSpace(name); name != "" {
-			if !isSlice(name) {
-				return fmt.Errorf("unknown slice %q (want one of %s)", name, strings.Join(sliceNames(), ", "))
-			}
-			dropped[name] = true
-		}
+	dropped, err := selectSlices(*with, *drop)
+	if err != nil {
+		return err
 	}
 	if *yes {
 		if *module == "" {
@@ -176,7 +179,7 @@ func runInit(args []string) error {
 		}
 	} else {
 		if !term.IsTerminal(int(os.Stdin.Fd())) && os.Getenv("ACCESSIBLE") == "" {
-			return errors.New("no terminal: pass -yes with -module and -drop, or set ACCESSIBLE=1 for line-based prompts")
+			return errors.New("no terminal: pass -yes with -module (and -with or -drop to change the components), or set ACCESSIBLE=1 for line-based prompts")
 		}
 		if err := prompt(module, dropped); err != nil {
 			return err
@@ -624,6 +627,56 @@ func sliceNames() []string {
 		names = append(names, s.Name)
 	}
 	return names
+}
+
+func optInNames() []string {
+	names := []string{}
+	for _, s := range slices {
+		if s.OptIn {
+			names = append(names, s.Name)
+		}
+	}
+	return names
+}
+
+// selectSlices returns the slices to remove: every opt-in slice not named in
+// with, plus every slice named in drop.
+func selectSlices(with, drop string) (map[string]bool, error) {
+	list := func(csv string) ([]string, error) {
+		var names []string
+		for _, name := range strings.Split(csv, ",") {
+			if name = strings.TrimSpace(name); name != "" {
+				if !isSlice(name) {
+					return nil, fmt.Errorf("unknown slice %q (want one of %s)", name, strings.Join(sliceNames(), ", "))
+				}
+				names = append(names, name)
+			}
+		}
+		return names, nil
+	}
+	keep, err := list(with)
+	if err != nil {
+		return nil, err
+	}
+	remove, err := list(drop)
+	if err != nil {
+		return nil, err
+	}
+	dropped := map[string]bool{}
+	for _, s := range slices {
+		dropped[s.Name] = s.OptIn
+	}
+	kept := map[string]bool{}
+	for _, name := range keep {
+		dropped[name], kept[name] = false, true
+	}
+	for _, name := range remove {
+		if kept[name] {
+			return nil, fmt.Errorf("slice %q is in both -with and -drop", name)
+		}
+		dropped[name] = true
+	}
+	return dropped, nil
 }
 
 func isSlice(name string) bool {

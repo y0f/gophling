@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -303,5 +304,42 @@ func repoRoot(t *testing.T) string {
 			t.Fatal("go.mod not found above the test directory")
 		}
 		dir = parent
+	}
+}
+
+func TestSelectSlicesKeepsOnlyCoreByDefault(t *testing.T) {
+	for _, tc := range []struct {
+		with, drop string
+		want       []string // dropped
+		err        string
+	}{
+		{want: []string{"admin", "idempotency", "otlp", "outbox"}},
+		{with: "outbox,idempotency,otlp,admin"},
+		{with: "outbox", want: []string{"admin", "idempotency", "otlp"}},
+		{drop: "example", want: []string{"admin", "example", "idempotency", "otlp", "outbox"}},
+		{drop: "outbox", want: []string{"admin", "idempotency", "otlp", "outbox"}},
+		{with: "outbox", drop: "outbox", err: "both -with and -drop"},
+		{with: "nope", err: `unknown slice "nope"`},
+	} {
+		dropped, err := selectSlices(tc.with, tc.drop)
+		if tc.err != "" {
+			if err == nil || !strings.Contains(err.Error(), tc.err) {
+				t.Errorf("with=%q drop=%q: error %v, want %q", tc.with, tc.drop, err, tc.err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("with=%q drop=%q: %v", tc.with, tc.drop, err)
+		}
+		var got []string
+		for name, gone := range dropped {
+			if gone {
+				got = append(got, name)
+			}
+		}
+		sort.Strings(got)
+		if strings.Join(got, ",") != strings.Join(tc.want, ",") {
+			t.Errorf("with=%q drop=%q: dropped %v, want %v", tc.with, tc.drop, got, tc.want)
+		}
 	}
 }

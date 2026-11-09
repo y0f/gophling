@@ -145,7 +145,7 @@ def scenario(args):
                        args.source, args.verify_timeout)
         runner.capture(["git", "checkout", "--quiet", "--detach", record["source_commit"]], fixture, args.verify_timeout)
         commands = [
-            ["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/eval/app"],
+            ["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/eval/app", "-with", "outbox,idempotency,otlp,admin"],
             ["go", "run", "./cmd/dev", "bootstrap"],
             ["go", "run", "./cmd/forge", "add", "resource", "Note"],
             ["go", "run", "./cmd/forge", "add", "resource", "Label"],

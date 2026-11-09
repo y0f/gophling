@@ -188,13 +188,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        drop:
+        options:
+          - "-with outbox,idempotency,otlp,admin"
+          - "-drop example"
           - ""
-          - "example,outbox,idempotency,otlp,admin"
-          - "outbox,idempotency,otlp,admin"
-          - "example"
-          - "example,idempotency,otlp,admin"
-          - "example,outbox,otlp,admin"
+          - "-with outbox,idempotency,otlp,admin -drop example"
+          - "-with outbox -drop example"
+          - "-with idempotency -drop example"
     steps:
       - uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
@@ -206,7 +206,7 @@ jobs:
           cache-dependency-path: |
             go.sum
             tools/go.sum
-      - run: go run ./cmd/forge init -yes -module github.com/example/app -drop "${{ matrix.drop }}"
+      - run: go run ./cmd/forge init -yes -module github.com/example/app ${{ matrix.options }}
       - run: go run ./cmd/forge add resource Order
       - run: go -C tools build -o ../bin/ github.com/go-task/task/v3/cmd/task
       - run: ./bin/task generate

@@ -47,12 +47,13 @@ func newProject(args []string) error {
 
 func createProject(args []string, initialize func([]string) error) (result error) {
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
-		return errors.New("usage: forge new <dir> [-ref tag-or-commit] [-source git-url-or-path] [-yes -module path -drop slices]")
+		return errors.New("usage: forge new <dir> [-ref tag-or-commit] [-source git-url-or-path] [-yes -module path -with slices -drop slices]")
 	}
 	fs := flag.NewFlagSet("forge new", flag.ContinueOnError)
 	source := fs.String("source", "https://"+scaffoldRepository, "scaffold repository")
 	ref := fs.String("ref", launcherRef(), "scaffold tag or commit (defaults to the launcher version when available)")
 	module := fs.String("module", "", "module path for the project")
+	with := fs.String("with", "", "comma-separated opt-in slices to keep")
 	drop := fs.String("drop", "", "comma-separated slices to remove")
 	yes := fs.Bool("yes", false, "do not prompt (requires -module)")
 	if err := fs.Parse(args[1:]); err != nil {
@@ -117,7 +118,7 @@ func createProject(args []string, initialize func([]string) error) (result error
 	if err := execStep("git", "add", "--force", "--all"); err != nil {
 		return err
 	}
-	initArgs := []string{"-module", *module, "-drop", *drop}
+	initArgs := []string{"-module", *module, "-with", *with, "-drop", *drop}
 	if *yes {
 		initArgs = append(initArgs, "-yes")
 	}

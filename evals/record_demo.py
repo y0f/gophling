@@ -230,7 +230,7 @@ def main():
         recorder.run(["git", "clone", "--quiet", "--no-hardlinks", str(source), str(workspace)])
         recorder.workspace = workspace
         recorder.run(["git", "checkout", "--quiet", "--detach", metadata["source_commit"]])
-        recorder.run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/demo/app"])
+        recorder.run(["go", "run", "./cmd/forge", "init", "-yes", "-module", "example.com/demo/app", "-with", "outbox,idempotency,otlp,admin"])
         recorder.run(["go", "run", "./cmd/dev", "bootstrap"])
         metadata["go"] = capture(["go", "version"])
         metadata["tools_go_mod_sha256"] = hashlib.sha256((workspace / "tools/go.mod").read_bytes()).hexdigest()
