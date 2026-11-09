@@ -2,7 +2,8 @@
 // a client-supplied Idempotency-Key, so retries do not duplicate side effects.
 // The key is written in the same transaction as the state change it guards,
 // which makes concurrent retries safe as well as sequential ones. This package
-// owns lookup, hashing, and the time-to-live.
+// owns lookup, hashing, and the time-to-live, and in claim.go the HTTP side a
+// resource's create shares: claiming a key, replaying, and storing a response.
 package idempotency
 
 import (
