@@ -135,27 +135,37 @@ func fmtCommand(targets []string) []string {
 // semantic linter fixes) on the Go files the working tree changed, because
 // golangci-lint fmt has no cache. It returns the files whose bytes changed.
 func formatChanged() ([]string, error) {
-	status, err := exec.Command("git", "status", "--porcelain=v1", "-z", "--untracked-files=all").Output()
-	if err != nil {
-		// Without Git status, lint still reports any formatting drift.
-		return nil, nil
+	// ls-files and diff --relative print paths relative to, and limited to,
+	// the project directory, which may sit inside a larger repository.
+	var lists [][]byte
+	for _, argv := range [][]string{
+		{"git", "ls-files", "-z", "--modified", "--others", "--exclude-standard"},
+		{"git", "diff", "--cached", "--name-only", "--relative", "-z"},
+	} {
+		out, err := exec.Command(argv[0], argv[1:]...).Output() //#nosec G204 -- fixed argv
+		if err != nil {
+			// Without Git, lint still reports any formatting drift.
+			return nil, nil
+		}
+		lists = append(lists, out)
 	}
-	files := changedGoFiles(status)
-	if len(files) == 0 {
-		return nil, nil
-	}
+	files := changedGoFiles(lists...)
 	before := make([][]byte, len(files))
 	for i, name := range files {
-		if before[i], err = os.ReadFile(name); err != nil { //#nosec G304 -- paths from git status
+		var err error
+		if before[i], err = os.ReadFile(name); err != nil { //#nosec G304 -- paths from git
 			return nil, err
 		}
 	}
-	if err := execute(nil, fmtCommand(files)...); err != nil {
-		return nil, err
+	// Batches keep each command line far below the Windows limit of 32k.
+	for batch := range slices.Chunk(files, 100) {
+		if err := execute(nil, fmtCommand(batch)...); err != nil {
+			return nil, err
+		}
 	}
 	var changed []string
 	for i, name := range files {
-		after, err := os.ReadFile(name) //#nosec G304 -- paths from git status
+		after, err := os.ReadFile(name) //#nosec G304 -- paths from git
 		if err != nil {
 			return nil, err
 		}
@@ -166,24 +176,20 @@ func formatChanged() ([]string, error) {
 	return changed, nil
 }
 
-// changedGoFiles parses git status --porcelain=v1 -z output. Generated code
-// belongs to checkGenerated, and deleted files have nothing to format.
-func changedGoFiles(status []byte) []string {
+// changedGoFiles merges NUL-separated path lists. Generated code belongs to
+// checkGenerated, and deleted files have nothing to format.
+func changedGoFiles(lists ...[]byte) []string {
 	var files []string
-	entries := strings.Split(string(status), "\x00")
-	for i := 0; i < len(entries); i++ {
-		if len(entries[i]) < 4 {
-			continue
-		}
-		code, name := entries[i][:2], entries[i][3:]
-		if strings.ContainsAny(code, "RC") {
-			i++ // the original path follows a rename or copy
-		}
-		if !strings.HasSuffix(name, ".go") || strings.HasPrefix(name, "internal/gen/") {
-			continue
-		}
-		if info, err := os.Lstat(name); err == nil && info.Mode().IsRegular() {
-			files = append(files, name)
+	seen := map[string]bool{}
+	for _, list := range lists {
+		for name := range strings.SplitSeq(string(list), "\x00") {
+			if seen[name] || !strings.HasSuffix(name, ".go") || strings.HasPrefix(name, "internal/gen/") {
+				continue
+			}
+			seen[name] = true
+			if info, err := os.Lstat(name); err == nil && info.Mode().IsRegular() {
+				files = append(files, name)
+			}
 		}
 	}
 	return files

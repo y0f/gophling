@@ -344,9 +344,9 @@ func TestChangedGoFilesKeepsExistingHandWrittenGo(t *testing.T) {
 	for _, name := range []string{"modified.go", "untracked.go", "renamed.go", "internal/gen/api.go", "notes.md"} {
 		writeFixture(t, name, "package x\n")
 	}
-	status := " M modified.go\x00?? untracked.go\x00R  renamed.go\x00original.go\x00D  deleted.go\x00" +
-		" M internal/gen/api.go\x00?? notes.md\x00"
-	if got, want := changedGoFiles([]byte(status)), []string{"modified.go", "untracked.go", "renamed.go"}; !slices.Equal(got, want) {
+	unstaged := "modified.go\x00untracked.go\x00deleted.go\x00internal/gen/api.go\x00notes.md\x00"
+	staged := "renamed.go\x00modified.go\x00"
+	if got, want := changedGoFiles([]byte(unstaged), []byte(staged)), []string{"modified.go", "untracked.go", "renamed.go"}; !slices.Equal(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 	if got := changedGoFiles(nil); got != nil {
