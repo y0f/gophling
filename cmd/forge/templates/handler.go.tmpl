@@ -10,9 +10,10 @@ import (
 	"{{.Module}}/internal/auth"
 	api "{{.Module}}/internal/gen/api"
 	db "{{.Module}}/internal/gen/db"
-	{{if .Idempotency}}
+	{{- if .Idempotency}}
 	"{{.Module}}/internal/idempotency"
-	{{end}}
+	{{- end}}
+	"{{.Module}}/internal/platform/httpjson"
 	"{{.Module}}/internal/platform/problem"
 )
 
@@ -21,9 +22,9 @@ import (
 type Handler struct {
 	api.Unimplemented // Unrelated resource operations are implemented by the composition root.
 	service           *Service
-	{{if .Idempotency}}
-	idempotency *idempotency.Store
-	{{end}}
+	{{- if .Idempotency}}
+	idempotency       *idempotency.Store
+	{{- end}}
 }
 
 func NewHandler(service *Service) *Handler {
@@ -50,13 +51,13 @@ func (h *Handler) List{{.Plural}}(w http.ResponseWriter, r *http.Request, params
 	for _, item := range items {
 		out.Items = append(out.Items, toResponse(item))
 	}
-	writeJSON(w, http.StatusOK, out)
+	httpjson.Write(w, http.StatusOK, out)
 }
 
 func (h *Handler) Create{{.Pascal}}(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeBodyError(w, r, err, "cannot read request body")
+		httpjson.BodyError(w, r, err, "cannot read request body")
 		return
 	}
 	var input api.{{.Pascal}}Input
@@ -66,13 +67,13 @@ func (h *Handler) Create{{.Pascal}}(w http.ResponseWriter, r *http.Request) {
 	}
 	actor, _ := auth.PrincipalFrom(r.Context())
 	in := inputFromAPI(input)
+	{{- if .Idempotency}}
 
-	{{if .Idempotency}}
 	if key := r.Header.Get("Idempotency-Key"); h.idempotency != nil && key != "" {
 		h.createIdempotent(w, r, actor, in, body, key)
 		return
 	}
-	{{end}}
+	{{- end}}
 	created, err := h.service.Create(r.Context(), actor, in)
 	if err != nil {
 		h.writeError(w, r, err)
@@ -83,7 +84,7 @@ func (h *Handler) Create{{.Pascal}}(w http.ResponseWriter, r *http.Request) {
 
 func writeCreated(w http.ResponseWriter, created db.{{.Pascal}}) {
 	w.Header().Set("Location", "/v1/{{.Table}}/"+created.ID.String())
-	writeJSON(w, http.StatusCreated, toResponse(created))
+	httpjson.Write(w, http.StatusCreated, toResponse(created))
 }
 
 func (h *Handler) Get{{.Pascal}}(w http.ResponseWriter, r *http.Request, id api.{{.Pascal}}ID) {
@@ -92,7 +93,7 @@ func (h *Handler) Get{{.Pascal}}(w http.ResponseWriter, r *http.Request, id api.
 		h.writeError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toResponse(found))
+	httpjson.Write(w, http.StatusOK, toResponse(found))
 }
 
 func (h *Handler) Update{{.Pascal}}(w http.ResponseWriter, r *http.Request, id api.{{.Pascal}}ID) {
@@ -100,7 +101,7 @@ func (h *Handler) Update{{.Pascal}}(w http.ResponseWriter, r *http.Request, id a
 	// The router's SingleJSONDocument middleware has already rejected bodies
 	// with trailing data after the JSON document.
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeBodyError(w, r, err, "invalid JSON body")
+		httpjson.BodyError(w, r, err, "invalid JSON body")
 		return
 	}
 	actor, _ := auth.PrincipalFrom(r.Context())
@@ -109,7 +110,7 @@ func (h *Handler) Update{{.Pascal}}(w http.ResponseWriter, r *http.Request, id a
 		h.writeError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toResponse(updated))
+	httpjson.Write(w, http.StatusOK, toResponse(updated))
 }
 
 func (h *Handler) Delete{{.Pascal}}(w http.ResponseWriter, r *http.Request, id api.{{.Pascal}}ID) {
@@ -146,29 +147,4 @@ func toResponse(w db.{{.Pascal}}) api.{{.Pascal}} {
 
 func inputFromAPI(in api.{{.Pascal}}Input) Input {
 	return Input{Name: in.Name}
-}
-
-// writeBodyError maps a body-read error to 413 when the configured size cap was
-// exceeded, and to 400 otherwise.
-func writeBodyError(w http.ResponseWriter, r *http.Request, err error, badRequestMsg string) {
-	var tooLarge *http.MaxBytesError
-	if errors.As(err, &tooLarge) {
-		problem.Status(w, r, http.StatusRequestEntityTooLarge, "request body exceeds the size limit")
-		return
-	}
-	problem.Status(w, r, http.StatusBadRequest, badRequestMsg)
-}
-
-// writeJSON marshals rather than streams so the bytes are exactly what an
-// idempotent replay stores and serves back: json.Encoder would append a
-// newline the stored copy does not have.
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	body, err := json.Marshal(v)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
 }

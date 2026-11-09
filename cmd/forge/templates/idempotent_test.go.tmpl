@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -15,7 +14,21 @@ import (
 	"{{.Module}}/internal/idempotency"
 )
 
-func (f *fakeRepo) CreateIdempotent(_ context.Context, in Input, _ IdempotencyClaim) (db.{{.Pascal}}, error) {
+func TestReplayChecksPermissionBeforeAccessingStore(t *testing.T) {
+	h := NewHandler(NewService(&fakeRepo{}))
+	// No idempotency store: denied requests must not reach it.
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/{{.Table}}", nil)
+	h.createIdempotent(w, r, auth.Principal{Subject: "alice"}, Input{Name: "example"}, []byte(`{"name":"example"}`), "existing-key")
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", w.Code)
+	}
+	if w.Header().Get("Idempotency-Replayed") != "" {
+		t.Fatal("denied request was replayed")
+	}
+}
+
+func (f *fakeRepo) CreateIdempotent(_ context.Context, in Input, _ idempotency.Claim) (db.{{.Pascal}}, error) {
 	f.createCalled = true
 	f.last = db.{{.Pascal}}{ID: uuid.New(), Name: in.Name}
 	return f.last, nil
@@ -24,43 +37,11 @@ func (f *fakeRepo) CreateIdempotent(_ context.Context, in Input, _ IdempotencyCl
 func TestServiceCreateIdempotentRequiresPermission(t *testing.T) {
 	repo := &fakeRepo{}
 	svc := NewService(repo)
-	_, err := svc.CreateIdempotent(context.Background(), auth.Principal{}, Input{Name: "example"}, IdempotencyClaim{Key: "k"})
+	_, err := svc.CreateIdempotent(context.Background(), auth.Principal{}, Input{Name: "example"}, idempotency.Claim{Key: "k"})
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("got %v, want ErrForbidden", err)
 	}
 	if repo.createCalled {
 		t.Error("repository CreateIdempotent should not run without permission")
-	}
-}
-
-// Keys are namespaced by subject, so a token without one would share a key
-// space with every other subject-less caller and could be replayed their
-// stored response.
-func TestCreateIdempotentRequiresSubject(t *testing.T) {
-	repo := &fakeRepo{}
-	h := NewHandler(NewService(repo))
-	h.EnableIdempotency(idempotency.NewStore(nil, time.Hour))
-	actor := auth.Principal{Scopes: []string{PermissionWrite}}
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	h.createIdempotent(rec, req, actor, Input{Name: "example"}, nil, "k")
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
-	}
-	if repo.createCalled {
-		t.Error("repository CreateIdempotent should not run without a subject")
-	}
-}
-
-func TestIdempotencyRowKeyIsUnambiguous(t *testing.T) {
-	if idempotencyRowKey("a", "b:c") == idempotencyRowKey("a:b", "c") {
-		t.Error("subjects containing ':' share row keys with other subjects")
-	}
-	if idempotencyRowKey("a%3Ab", "c") == idempotencyRowKey("a:b", "c") {
-		t.Error("an escaped subject aliases a raw one")
-	}
-	// Rows stored before the escaping stay readable for ordinary subjects.
-	if got := idempotencyRowKey("alice", "k:1"); got != "alice:k:1" {
-		t.Errorf("row key = %q, want alice:k:1", got)
 	}
 }

@@ -13,6 +13,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	db "{{.Module}}/internal/gen/db"
+	{{- if .Idempotency}}
+	"{{.Module}}/internal/idempotency"
+	{{- end}}
 	{{- if .Outbox}}
 	"{{.Module}}/internal/outbox"
 	{{- end}}
@@ -25,7 +28,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, in Input) (db.{{.Pascal}}, error)
 	{{- if .Idempotency}}
-	CreateIdempotent(ctx context.Context, in Input, claim IdempotencyClaim) (db.{{.Pascal}}, error)
+	CreateIdempotent(ctx context.Context, in Input, claim idempotency.Claim) (db.{{.Pascal}}, error)
 	{{- end}}
 	Get(ctx context.Context, id uuid.UUID) (db.{{.Pascal}}, error)
 	List(ctx context.Context, limit, offset int32) ([]db.{{.Pascal}}, int64, error)
