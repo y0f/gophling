@@ -8,7 +8,7 @@
   idempotency keys, OTLP tracing, the admin listener, and the signed binary
   release pipeline are opt-in with `-with outbox,idempotency,otlp,admin,release`;
   `-drop` still removes components.
-  Compared with the v2.0.0 default, a fresh project has 127 instead of 151
+  Compared with the v2.0.0 default, a fresh project has 119 instead of 151
   files, about 7,400 instead of 8,800 lines of hand-written Go (tests included,
   `internal/gen` excluded), and 171 instead of 266 third-party packages in the
   API build.
