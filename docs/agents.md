@@ -24,12 +24,6 @@ instruction-loading paths, not claims that every client passed the evaluations.
 | Gemini CLI | `GEMINI.md` imports `@./AGENTS.md`; use `/memory show` to inspect [loaded context](https://geminicli.com/docs/cli/gemini-md/) |
 | Copilot | `AGENTS.md` for supported agents; `.github/copilot-instructions.md` for other [supported surfaces](https://docs.github.com/en/copilot/reference/custom-instructions-support) |
 | Cursor | Uses root `AGENTS.md` as [project instructions](https://cursor.com/docs/rules#agentsmd) |
-
-Claude Code 2.1.277+ can read `AGENTS.md` directly when project or ancestor
-Claude instruction files do not take precedence. The explicit `@AGENTS.md`
-import supports older clients and sessions without native loading, is
-deduplicated, and avoids symlinks on Windows. Use `/context all` to confirm
-loaded memory files.
 <!-- forge:end init -->
 
 ## Local setup

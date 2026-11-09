@@ -8,17 +8,20 @@
   idempotency keys, OTLP tracing, and the admin listener are opt-in with
   `-with outbox,idempotency,otlp,admin`; `-drop` still removes components.
   Compared with the v2.0.0 default, a fresh project has 127 instead of 151
-  files, about 7,400 instead of 8,800 lines of Go, and 200 instead of 297
-  external packages in the API build.
+  files, about 7,400 instead of 8,800 lines of hand-written Go (tests included,
+  `internal/gen` excluded), and 171 instead of 266 third-party packages in the
+  API build.
 - `forge add resource` runs `go run ./cmd/dev generate` itself, so the tree
   builds immediately. Pass `-no-generate` to batch several resources and
   generate once. The printed next steps no longer include
   `go run ./cmd/migrate up`, which failed without `FORGE_DB_URL`; integration
   tests apply migrations to their own databases.
-- `dev check` builds first and stops on compile errors, then runs lint and unit
-  tests to completion and names every failing step. It also formats the Go
-  files changed in the working tree (formatters only, never lint fixes);
+- `dev check` stops at generation or compile errors; otherwise it runs lint and
+  unit tests to completion and names every failing step. It also formats the
+  Go files changed in the working tree (formatters only, never lint fixes);
   `dev ci` stays check-only.
+- The example widget validates names like generated resources: blank or
+  whitespace-only names now return 400.
 - Generated idempotency code is a thin per-resource adapter over shared
   `internal/idempotency` and `internal/platform/httpjson` helpers. A generated
   resource is 606 lines in the default project and 786 with every component,

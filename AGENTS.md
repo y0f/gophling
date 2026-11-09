@@ -10,13 +10,14 @@ go run ./cmd/dev bootstrap  # pinned tools; network on first use
 go run ./cmd/dev doctor     # available prerequisites
 go run ./cmd/dev fmt        # gofumpt+goimports; pass packages to scope
 go run ./cmd/dev generate   # regenerate internal/gen from SQL and OpenAPI
-go run ./cmd/dev check      # formats changed files; build, lint, generation, unit tests
+go run ./cmd/dev check      # generation, format, build, lint, unit tests
 go test -tags integration -count=1 ./...  # Docker or FORGE_TEST_DATABASE_URL
 go run ./cmd/dev ci         # full local gate; Docker and a C compiler
 ```
 
 Use a focused package test while editing. Run the fast check before handing off
-code; it reports every failing step. Use integration tests for SQL, migrations,
+code; it stops at generation or compile errors, otherwise reports every lint
+and test failure. Use integration tests for SQL, migrations,
 transactions, and HTTP behavior. Report checks that could not run.
 
 ## Boundaries

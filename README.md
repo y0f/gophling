@@ -31,9 +31,10 @@ cd myapp
 go run ./cmd/dev bootstrap
 ```
 
-The installer asks for a module path. New projects keep the core API and the
-example `widget` resource; add components with `-with`, remove the example with
-`-drop example`. For automation, pass `-yes -module github.com/you/myapp`.
+The installer asks for a module path and the components to keep. New projects
+keep the core API and the example `widget` resource; add components with
+`-with`, remove the example with `-drop example`. For automation, pass
+`-yes -module github.com/you/myapp`.
 
 | Component | Adds |
 | --- | --- |
@@ -42,8 +43,9 @@ example `widget` resource; add components with `-with`, remove the example with
 | `otlp` | OTLP trace export plus a Collector, Tempo, and Grafana profile |
 | `admin` | Token-protected pprof and expvar on a separate port |
 
-Keeping all four adds 26 files, about 1,750 lines of Go, 4 migrations, and 106
-external packages to the API build.
+Keeping all four adds 26 files, about 1,750 lines of hand-written Go (tests
+included, `internal/gen` excluded), 4 migrations, and 103 third-party packages
+to the API build.
 
 `-ref <tag-or-SHA>` selects the scaffold revision, and `.forge.json` records it.
 If initialization is interrupted while publishing files, run

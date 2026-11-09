@@ -33,8 +33,8 @@ before retrying. Separate worktrees avoid sharing that lock.
 6. Run `go run ./cmd/dev check` and `go test -tags integration -count=1 ./...`.
    Integration tests apply migrations to isolated databases.
 
-To migrate your development database, set `FORGE_DB_URL` (see `.env.example`)
-and run `go run ./cmd/migrate up`.
+To migrate your development database, copy `.env.example` to `.env` and run
+`./bin/task migrate`.
 
 The logged development token has the `admin` role. For local Note writes, add
 `notes:write` to that role's existing grants in `internal/auth/principal.go`

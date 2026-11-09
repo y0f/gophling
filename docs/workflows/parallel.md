@@ -50,8 +50,7 @@ Go module path. Moving a checkout keeps that name; worktrees of the same app sha
 Prefer one coordinator-owned development stack while workers use isolated test
 databases. A simultaneous worker stack needs a unique `COMPOSE_PROJECT_NAME` and
 different `FORGE_DEV_API_PORT` and `FORGE_DEV_DB_PORT` values in its untracked
-`.env`; Compose reads it. When migrating that database from the host with
-`go run ./cmd/migrate up`, set `FORGE_DB_URL` to its port.
+`.env`, which `./bin/task up` and `./bin/task migrate` load.
 <!-- forge:begin otlp -->
 For simultaneous observability stacks, also choose different
 `FORGE_DEV_OTLP_PORT`, `FORGE_DEV_COLLECTOR_METRICS_PORT`,
@@ -62,9 +61,9 @@ selects a different volume; it does not move or delete existing data.
 
 ## Integrate and verify
 
-1. Each worker runs `go run ./cmd/dev check` in its worktree, then hands off
-   the diff, exact test outcomes, shared-file requests, and unresolved
-   decisions.
+1. Each worker runs `go run ./cmd/dev fmt ./internal/modules/<name>/...` and
+   `go test ./internal/modules/<name>/...`, then hands off the diff, exact test
+   outcomes, shared-file requests, and unresolved decisions.
 2. The coordinator reviews each change and integrates sources one at a time.
    Only renumber migrations that have never been applied. Resolve duplicate
    versions before running migrations or generating SQL bindings.
