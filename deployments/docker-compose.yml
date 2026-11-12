@@ -57,7 +57,7 @@ services:
 
   # forge:begin otlp
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.164.0
+    image: otel/opentelemetry-collector-contrib:0.165.0
     profiles: ["observability"]
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
@@ -74,7 +74,7 @@ services:
       - ./observability/tempo.yaml:/etc/tempo.yaml:ro
 
   prometheus:
-    image: prom/prometheus:v3.15.1
+    image: prom/prometheus:v3.16.0
     profiles: ["observability"]
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
