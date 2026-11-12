@@ -21,8 +21,8 @@ in separate files.
 
 ## Start a project
 
-Use a patched supported Go release (minimum 1.26.10) and Git. Bootstrap uses
-the pinned Go 1.27.3 toolchain, downloading it if needed. Docker runs the local
+Use a patched supported Go release (minimum 1.26.11) and Git. Bootstrap uses
+the pinned Go 1.27.4 toolchain, downloading it if needed. Docker runs the local
 database.
 
 ```sh

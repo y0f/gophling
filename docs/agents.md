@@ -28,7 +28,7 @@ instruction-loading paths, not claims that every client passed the evaluations.
 
 ## Local setup
 
-Use a patched supported Go release (minimum 1.26.10) and Git, then run:
+Use a patched supported Go release (minimum 1.26.11) and Git, then run:
 
 ```sh
 go run ./cmd/dev bootstrap
@@ -36,7 +36,7 @@ go run ./cmd/dev doctor
 go run ./cmd/dev check
 ```
 
-Bootstrap builds the tools pinned in `tools/go.mod` into `bin` with Go 1.27.3,
+Bootstrap builds the tools pinned in `tools/go.mod` into `bin` with Go 1.27.4,
 downloading that toolchain if needed. The first run needs network access.
 Start your coding agent in the repository root and ask it to summarize the
 instructions to confirm they loaded. For humans, `./bin/task` (Windows:

@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.1.1
+
+### Security
+
+- Go 1.27.4 is the pinned toolchain and Go 1.26.11 the minimum, for
+  [GO-2026-6859](https://pkg.go.dev/vuln/GO-2026-6859) (CVE-2026-97054): an
+  HTTP/1 server using `http.MaxBytesReader` could panic when a handler read
+  the request body while writing response headers. The API limits every
+  request body that way, and `govulncheck` reports the path as reachable.
+  The build image moves to `golang:1.27.4-trixie`. Projects created from an
+  earlier version should raise `go` and `toolchain` in `go.mod` and
+  `tools/go.mod` and the `golang` image in `deployments/Dockerfile`.
+
 ## v2.1.0
 
 ### Changed

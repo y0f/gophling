@@ -378,15 +378,15 @@ func TestRunStepsReportsEveryFailingStep(t *testing.T) {
 
 func TestDoctorChecksTheProjectGoMinimum(t *testing.T) {
 	t.Chdir(t.TempDir())
-	writeFixture(t, "go.mod", "module example.com/app\n\ngo 1.26.10\ntoolchain go1.27.3\n")
+	writeFixture(t, "go.mod", "module example.com/app\n\ngo 1.26.11\ntoolchain go1.27.4\n")
 	for _, running := range []string{"go1.26.0", "go1.26.9", "go1.25.10"} {
 		if _, err := checkGoVersion(running); err == nil {
 			t.Errorf("accepted outdated %s", running)
 		}
 	}
-	for _, running := range []string{"go1.26.10", "go1.27.3", "go1.28.0", "devel go1.28-abcdef"} {
+	for _, running := range []string{"go1.26.11", "go1.27.4", "go1.28.0", "devel go1.28-abcdef"} {
 		minimum, err := checkGoVersion(running)
-		if err != nil || minimum != "go1.26.10" {
+		if err != nil || minimum != "go1.26.11" {
 			t.Errorf("%s: minimum %q, error %v", running, minimum, err)
 		}
 	}

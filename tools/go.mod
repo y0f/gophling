@@ -1,11 +1,11 @@
 module github.com/y0f/gophling/tools
 
-go 1.26.10
+go 1.26.11
 
 // The generators embed the OpenAPI spec compressed by this release, so the
 // output only matches CI (and every other machine) when they are built with
 // the same one.
-toolchain go1.27.3
+toolchain go1.27.4
 
 tool (
 	github.com/air-verse/air

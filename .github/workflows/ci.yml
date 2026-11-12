@@ -48,6 +48,10 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go }}
+          # The runner image can lag a patch release behind. With
+          # GOTOOLCHAIN=local below, a stale cached patch older than go.mod's
+          # minimum fails instead of upgrading, so resolve the newest one.
+          check-latest: true
           cache-dependency-path: go.sum
       # Exercise the selected minimum/stable line instead of auto-upgrading
       # both matrix entries to go.mod's preferred toolchain.
