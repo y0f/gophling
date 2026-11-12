@@ -1,8 +1,8 @@
 module github.com/y0f/gophling/v2
 
-go 1.26.10
+go 1.26.11
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	github.com/MicahParks/keyfunc/v3 v3.9.1
