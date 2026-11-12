@@ -125,6 +125,7 @@ var initPaths = []string{
 	"cmd/forge/init_recovery.go", "cmd/forge/init_recovery_test.go", "cmd/forge/generator_test.go",
 	"cmd/forge/init_version_test.go", "cmd/forge/parity_test.go",
 	"cmd/forge/templates/journey_test.go.tmpl", "CHANGELOG.md", "evals",
+	".github/workflows/dependabot-auto-merge.yml",
 	"docs/choosing.md", "docs/_config.yml", "docs/_layouts", "docs/assets/site.css",
 	"docs/demo.md", "docs/assets/demo.js", "docs/assets/demo.css", "docs/assets/demo.cast",
 	"docs/assets/demo.txt", "docs/assets/demo.json", "docs/assets/gophling.png",
